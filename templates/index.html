@@ -7,7 +7,7 @@
 
 <header class="header">
   <div class="brand">
-    <img class="logo" src="/static/logo.png" alt="Chicago Cubs logo" />
+    <img class="logo" src="/static/logo.png" alt="Team logo" />
     <div>
       <h1>{{ team_name }}</h1>
       <div class="sub">Updated: <span id="updated">{{ updated or "—" }}</span></div>
@@ -26,7 +26,17 @@
     <summary class="pill">Sources ▾</summary>
     <div class="menu">
       {% for f in feeds %}
-        <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>
+        {# --- Turn RSS into human-friendly pages --- #}
+        {% set _u = f.url %}
+        {% if 'news.google.com/rss/' in _u %}
+          {# Google News: /rss/search -> /search and strip any output=rss #}
+          {% set _u = _u|replace('/rss/','/')|replace('output=rss','') %}
+        {% endif %}
+        {% if 'bing.com/news/search' in _u %}
+          {# Bing News RSS uses format=rss — drop it for the UI view #}
+          {% set _u = _u|replace('format=rss','') %}
+        {% endif %}
+        <a href="{{ _u }}" target="_blank" rel="noopener">{{ f.name }}</a>
       {% endfor %}
     </div>
   </details>
@@ -43,7 +53,7 @@
   <div id="notice" class="notice">New items available — <button id="applyBtn" class="pill">Refresh</button></div>
   <section id="feed">
     {% if not items %}
-      <div class="empty">No articles yet. Try refresh in a minute.</div>
+      <div class="empty">No articles yet. Tap Refresh in a minute or use /collect-open.</div>
     {% else %}
       {% for it in items %}
       <article class="card">
@@ -62,7 +72,14 @@
 <footer>
   <small>Feeds:
     {% for f in feeds %}
-      <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
+      {% set _u = f.url %}
+      {% if 'news.google.com/rss/' in _u %}
+        {% set _u = _u|replace('/rss/','/')|replace('output=rss','') %}
+      {% endif %}
+      {% if 'bing.com/news/search' in _u %}
+        {% set _u = _u|replace('format=rss','') %}
+      {% endif %}
+      <a href="{{ _u }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
     {% endfor %}
   </small>
 </footer>
@@ -82,10 +99,11 @@
 
   const feedEl=document.getElementById('feed');
   const updatedEl=document.getElementById('updated');
+
   function domainFrom(u){try{return new URL(u).hostname.replace(/^www\\./,'');}catch(e){return '';}}
 
   function render(items,updated){
-    updatedEl.textContent=updated||updatedEl.textContent;
+    if(updated) updatedEl.textContent=updated;
     feedEl.innerHTML=(items||[]).map(it=>`
       <article class="card">
         <a class="title" href="${it.link}" target="_blank" rel="noopener">${it.title}</a>
@@ -112,7 +130,7 @@
       }
     }catch(e){}
   }
-  setInterval(check,180000);
+  setInterval(check,180000); // 3 min
 
   let cacheItems={{ items|tojson }};
   const q=document.getElementById('search'),sugg=document.getElementById('sugg');
@@ -134,3 +152,4 @@
   q.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();render(filterLocal(q.value)||[],null);sugg.hidden=true;} if(e.key==='Escape'){q.value='';sugg.hidden=true;render(cacheItems,null);}});
 })();
 </script>
+
