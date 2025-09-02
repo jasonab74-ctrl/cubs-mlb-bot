@@ -1,0 +1,136 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ team_name }}</title>
+<link rel="icon" href="/static/logo.png">
+<link rel="stylesheet" href="/static/style.css">
+
+<header class="header">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>{{ team_name }}</h1>
+      <div class="sub">Updated: <span id="updated">{{ updated or "—" }}</span></div>
+    </div>
+  </div>
+</header>
+
+<audio id="fightAudio" src="/static/fight-song.mp3" preload="auto"></audio>
+
+<nav class="quick">
+  <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Play Fight Song</button>
+  {% for text, url in quick_links %}
+    <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
+  {% endfor %}
+  <details class="sdropdown">
+    <summary class="pill">Sources ▾</summary>
+    <div class="menu">
+      {% for f in feeds %}
+        <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>
+      {% endfor %}
+    </div>
+  </details>
+</nav>
+
+<div class="sbar">
+  <div class="suggest">
+    <input id="search" type="search" placeholder="Search articles (title, summary, source)…" autocomplete="off">
+    <ul id="sugg" hidden></ul>
+  </div>
+</div>
+
+<main>
+  <div id="notice" class="notice">New items available — <button id="applyBtn" class="pill">Refresh</button></div>
+  <section id="feed">
+    {% if not items %}
+      <div class="empty">No articles yet. Try refresh in a minute.</div>
+    {% else %}
+      {% for it in items %}
+      <article class="card">
+        <a class="title" href="{{ it.link }}" target="_blank" rel="noopener">{{ it.title }}</a>
+        {% if it.summary %}<p class="summary">{{ it.summary }}</p>{% endif %}
+        <div class="meta">
+          <span class="chip">{{ it.domain or it.source }}</span>
+          {% if it.when %}<time class="time">{{ it.when }}</time>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    {% endif %}
+  </section>
+</main>
+
+<footer>
+  <small>Feeds:
+    {% for f in feeds %}
+      <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </small>
+</footer>
+
+<script>
+(function(){
+  const audio=document.getElementById('fightAudio');
+  const fbtn=document.getElementById('fightBtn');
+  if(audio&&fbtn){
+    const set=on=>{fbtn.textContent=on?'Pause Fight Song':'Play Fight Song';fbtn.classList.toggle('on',on);fbtn.setAttribute('aria-pressed',on?'true':'false');};
+    set(false);
+    fbtn.onclick=async()=>{try{if(audio.paused){await audio.play();set(true);}else{audio.pause();set(false);}}catch(e){}};
+    audio.addEventListener('ended',()=>set(false));
+    audio.addEventListener('pause',()=>set(false));
+    audio.addEventListener('play',()=>set(true));
+  }
+
+  const feedEl=document.getElementById('feed');
+  const updatedEl=document.getElementById('updated');
+  function domainFrom(u){try{return new URL(u).hostname.replace(/^www\\./,'');}catch(e){return '';}}
+
+  function render(items,updated){
+    updatedEl.textContent=updated||updatedEl.textContent;
+    feedEl.innerHTML=(items||[]).map(it=>`
+      <article class="card">
+        <a class="title" href="${it.link}" target="_blank" rel="noopener">${it.title}</a>
+        ${it.summary?`<p class="summary">${it.summary}</p>`:''}
+        <div class="meta">
+          <span class="chip">${it.domain||domainFrom(it.link)||it.source||'Source'}</span>
+          ${it.when?`<time class="time">${it.when}</time>`:''}
+        </div>
+      </article>
+    `).join('')||'<div class="empty">No articles.</div>';
+  }
+
+  let lastUpdated="{{ updated or '' }}";
+  const notice=document.getElementById('notice');
+  const applyBtn=document.getElementById('applyBtn');
+
+  async function check(){
+    try{
+      const res=await fetch('/items.json',{cache:'no-store'});
+      const j=await res.json();
+      if(j.updated && j.updated!==lastUpdated){
+        notice.style.display='block';
+        applyBtn.onclick=()=>{lastUpdated=j.updated;render(j.items,j.updated);notice.style.display='none';};
+      }
+    }catch(e){}
+  }
+  setInterval(check,180000); // 3 min
+
+  let cacheItems={{ items|tojson }};
+  const q=document.getElementById('search'),sugg=document.getElementById('sugg');
+  function filterLocal(term){
+    const t=term.trim().toLowerCase();
+    if(!t){sugg.hidden=true;render(cacheItems,null);return [];}
+    const hits=cacheItems.filter(it=>
+      (it.title||'').toLowerCase().includes(t)||
+      (it.summary||'').toLowerCase().includes(t)||
+      (it.source||'').toLowerCase().includes(t)||
+      (it.link||'').toLowerCase().includes(t)
+    );
+    sugg.innerHTML=hits.slice(0,8).map(it=>`<li data-link="${it.link}">${it.title}</li>`).join('')||`<li>No matches</li>`;
+    sugg.hidden=false;
+    sugg.querySelectorAll('li[data-link]').forEach(li=>{li.onclick=()=>window.open(li.dataset.link,'_blank');});
+    return hits;
+  }
+  q.addEventListener('input',()=>filterLocal(q.value));
+  q.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();render(filterLocal(q.value)||[],null);sugg.hidden=true;} if(e.key==='Escape'){q.value='';sugg.hidden=true;render(cacheItems,null);}});
+})();
+</script>
