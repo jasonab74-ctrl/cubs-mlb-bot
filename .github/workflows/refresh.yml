@@ -1,0 +1,32 @@
+name: Refresh Cubs Feed
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes
+  workflow_dispatch:         # allow manual run from Actions tab
+
+jobs:
+  refresh:
+    concurrency:
+      group: cubs-feed-refresh
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kick collector
+        run: |
+          set -e
+          URL="https://cubs-mlb-bot-production.up.railway.app"
+          echo "Hitting $URL/collect-open ..."
+          # retry up to 5 times with backoff (handles cold starts / brief 5xx)
+          for i in 1 2 3 4 5; do
+            if curl -sS -m 25 -f "$URL/collect-open" -o /dev/null; then
+              echo "Collect triggered."
+              break
+            fi
+            echo "Retry $i..."
+            sleep $((i*5))
+          done
+
+      - name: (Optional) Verify health
+        run: |
+          curl -sS "https://cubs-mlb-bot-production.up.railway.app/health" || true
