@@ -22,24 +22,6 @@
   {% for text, url in quick_links %}
     <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
   {% endfor %}
-  <details class="sdropdown">
-    <summary class="pill">Sources ▾</summary>
-    <div class="menu">
-      {% for f in feeds %}
-        {# --- Turn RSS into human-friendly pages --- #}
-        {% set _u = f.url %}
-        {% if 'news.google.com/rss/' in _u %}
-          {# Google News: /rss/search -> /search and strip any output=rss #}
-          {% set _u = _u|replace('/rss/','/')|replace('output=rss','') %}
-        {% endif %}
-        {% if 'bing.com/news/search' in _u %}
-          {# Bing News RSS uses format=rss — drop it for the UI view #}
-          {% set _u = _u|replace('format=rss','') %}
-        {% endif %}
-        <a href="{{ _u }}" target="_blank" rel="noopener">{{ f.name }}</a>
-      {% endfor %}
-    </div>
-  </details>
 </nav>
 
 <div class="sbar">
@@ -70,18 +52,7 @@
 </main>
 
 <footer>
-  <small>Feeds:
-    {% for f in feeds %}
-      {% set _u = f.url %}
-      {% if 'news.google.com/rss/' in _u %}
-        {% set _u = _u|replace('/rss/','/')|replace('output=rss','') %}
-      {% endif %}
-      {% if 'bing.com/news/search' in _u %}
-        {% set _u = _u|replace('format=rss','') %}
-      {% endif %}
-      <a href="{{ _u }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
-    {% endfor %}
-  </small>
+  <small>All content aggregated from public sources.</small>
 </footer>
 
 <script>
@@ -152,4 +123,3 @@
   q.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();render(filterLocal(q.value)||[],null);sugg.hidden=true;} if(e.key==='Escape'){q.value='';sugg.hidden=true;render(cacheItems,null);}});
 })();
 </script>
-
