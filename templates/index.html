@@ -7,7 +7,7 @@
 
 <header class="header">
   <div class="brand">
-    <div class="logo" aria-hidden="true"></div>
+    <img class="logo" src="/static/logo.png" alt="Chicago Cubs logo" />
     <div>
       <h1>{{ team_name }}</h1>
       <div class="sub">Updated: <span id="updated">{{ updated or "—" }}</span></div>
@@ -112,7 +112,7 @@
       }
     }catch(e){}
   }
-  setInterval(check,180000); // 3 min
+  setInterval(check,180000);
 
   let cacheItems={{ items|tojson }};
   const q=document.getElementById('search'),sugg=document.getElementById('sugg');
