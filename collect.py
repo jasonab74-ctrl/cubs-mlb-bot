@@ -1,169 +1,188 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, json, time, re, html as _html
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List
-from urllib.parse import urlparse
+"""
+Collects articles from FEEDS (feeds.py), filters for **Chicago Cubs (MLB)**,
+normalizes, sorts newest-first, and writes items.json.
 
-import requests, feedparser
-from feeds import FEEDS
+- Always excludes other sports (NFL/NBA/NHL/CFB, etc.).
+- Trusted Cubs sources bypass strict include checks but STILL honor hard excludes.
+- Caps output to the 50 most recent (override with MAX_ITEMS env var).
+"""
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTFILE = os.path.join(APP_DIR, "items.json")
+import os
+import json
+import time
+from datetime import datetime, timezone
+from typing import List, Dict, Any
 
-USER_AGENT = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-HTTP_TIMEOUT = 20
-MAX_ITEMS = 50   # <-- cap to 50 most recent
+import feedparser
+import requests
 
-# Domains that auto-pass filtering (official/major Cubs sources, keep as-is or extend)
-TRUSTED_DOMAINS = {
-    "mlb.com", "www.mlb.com",
-    "espn.com", "www.espn.com",
-    "bleedcubbieblue.com", "www.bleedcubbieblue.com",
-    "cubsinsider.com", "www.cubsinsider.com",
-    "bleachernation.com", "www.bleachernation.com",
-    "sports.yahoo.com", "www.sports.yahoo.com",
-    "cbssports.com", "www.cbssports.com",
-    "chicagotribune.com", "www.chicagotribune.com",
-    "chicago.suntimes.com",
-    "reddit.com", "www.reddit.com", "old.reddit.com",
+from feeds import FEEDS  # list of dicts: {"name": ..., "url": ...}
+
+# ---- Settings ----
+OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "items.json")
+TIMEOUT = float(os.environ.get("HTTP_TIMEOUT", "12"))
+MAX_ITEMS = int(os.environ.get("MAX_ITEMS", "50"))
+
+# Trusted sources (still respect hard excludes)
+TRUSTED_SOURCES = {
+    "Cubs — Official",
+    "Bleed Cubbie Blue",
+    "Cubs Insider",
+    "Bleacher Nation — Cubs",
+    "Reddit — r/CHICubs",
+    "ESPN",
+    "CBS Sports",
+    "Yahoo Sports",
 }
 
-def http_get(url: str) -> bytes:
-    r = requests.get(
-        url, timeout=HTTP_TIMEOUT, allow_redirects=True,
-        headers={"User-Agent": USER_AGENT, "Accept":"application/rss+xml,application/xml,*/*;q=0.8"}
-    )
+# Include signals (team/venue/league)
+KEY_INCLUDE = [
+    "chicago cubs", "cubs", "north siders", "north siders",
+    "wrigley", "wrigley field",
+    "mlb", "major league baseball", "national league", "nl central",
+]
+
+# Baseball context words
+KEY_BASEBALL = [
+    "baseball", "mlb", "pitcher", "reliever", "starter", "rotation", "bullpen",
+    "inning", "batting", "hitter", "hitting", "home run", "homer", "slugger",
+    "triple-a", "iowa cubs", "minor league", "prospect", "lineup",
+]
+
+# Hard excludes — these block items even from trusted sources
+KEY_EXCLUDE = [
+    # other Chicago teams / sports
+    "bears", "nfl", "blackhawks", "nhl", "bulls", "nba", "sky", "wnba",
+    "fire", "mls", "chicago state", "northwestern", "white sox", "sox",
+    # college football/basketball terms
+    "purdue", "boilermaker", "boilermakers", "notre dame", "fighting irish",
+    "illini", "northwestern wildcats", "badgers", "buckeyes", "spartans",
+    "football", "college football", "cfb",
+    # obviously not baseball
+    "volleyball", "softball", "soccer",
+]
+
+# People (recent/typical Cubs references — add more anytime)
+PEOPLE = [
+    "jed hoyer", "carter hawkins", "craig counsell",
+    "dansby swanson", "seiya suzuki", "ian happ", "nicho hoerner", "christopher morel",
+    "michael busch", "pete crow-armstrong", "shota imanaga", "justin steele",
+    "javier assad", "jordan wicks", "adbert alzolay", "hector neris", "mark leiter jr",
+]
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def fetch(url: str) -> bytes:
+    r = requests.get(url, timeout=TIMEOUT, headers={"User-Agent": "cubs-feed-bot/1.0"})
     r.raise_for_status()
     return r.content
 
-def clean(s:str)->str:
-    s = _html.unescape(s or "")
-    s = re.sub(r"<.*?>", "", s)
-    return s.replace("\xa0", " ").strip()
 
-def domain_of(u:str)->str:
-    try:
-        d = urlparse(u).netloc.lower()
-        return re.sub(r"^www\.", "", d)
-    except Exception:
-        return ""
+def parse_datetime(entry: Dict[str, Any]) -> float:
+    ts = None
+    for key in ("published_parsed", "updated_parsed"):
+        val = entry.get(key)
+        if val:
+            try:
+                ts = time.mktime(val)
+                break
+            except Exception:
+                pass
+    if ts is None:
+        ts = time.time()
+    return float(ts)
 
-def fmt_clock(dt):
-    h = dt.strftime("%I").lstrip("0") or "0"
-    return f"{h}:{dt.strftime('%M')} {dt.strftime('%p')}"
 
-def nice_when(ts:int, raw:str)->str:
-    try:
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc) if ts>0 else None
-    except Exception:
-        dt=None
-    if not dt: return raw or ""
-    today = datetime.now(timezone.utc).date(); d = dt.date()
-    if d==today: p="Today"
-    elif (today-d)==timedelta(days=1): p="Yesterday"
-    else: p = dt.strftime("%b ")+str(int(dt.strftime("%d")))
-    return f"{p} • {fmt_clock(dt)}"
+def norm(x: Any) -> str:
+    return (x or "").strip()
 
-# ---- Cubs filter (loose but targeted) ----
-POS_STRONG = [
-    "chicago cubs"," cubs","north siders","cubbies","wrigley field","wrigleyville",
-    "craig counsell","tom ricketts",
-    "dansby swanson","cody bellinger","seiya suzuki","ian happ","nico hoerner",
-    "christopher morel","pete crow-armstrong","michael bush",
-    "justin steele","shota imanaga","kyle hendricks","javier assad","ben brown",
-    "adbert alzolay","jordan wicks","hayden wesneski","julian merriweather",
-    "iowa cubs","tennessee smokies","south bend cubs","myrtle beach pelicans",
-]
-POS_BASEBALL = [
-    "mlb","baseball","pitcher","pitching","hitter","batting","lineup","home run",
-    "homer","hr","rbi","era","innings","bullpen","rotation","il","injury","rehab",
-    "call-up","optioned","waivers","trade","minor league","prospect","double-a",
-    "triple-a","aaa","aa","box score","recap","preview"
-]
-NEG_OTHER = [
-    "chicago white sox","white sox","bears","bulls","blackhawks","fire",
-    "nfl","nba","nhl","mls","college football","ncaa football","basketball","football"
-]
 
-def looks_cubs(title:str, summary:str, link:str)->bool:
-    txt = f"{title} {summary} {link}".lower()
+def allow_item(title: str, summary: str, source: str) -> bool:
+    """
+    Cubs filter:
+    - Hard excludes first (block non-baseball/other teams).
+    - Trusted sources allowed after excludes.
+    - Otherwise require Cubs/venue/league + baseball context OR player/exec names.
+    """
+    t = f"{title} {summary}".lower()
 
-    # Trusted domains always pass
-    d = urlparse(link).netloc.lower()
-    if d in TRUSTED_DOMAINS or re.sub(r"^www\.", "", d) in TRUSTED_DOMAINS:
-        return True
-
-    # Hard drops first
-    if any(n in txt for n in NEG_OTHER):
+    if any(ex in t for ex in KEY_EXCLUDE):
         return False
 
-    # Obvious keeps
-    if any(p in txt for p in POS_STRONG):
+    if source in TRUSTED_SOURCES:
         return True
 
-    # Generic keeps: mention Cubs/Wrigley with baseball context
-    if ("cubs" in txt or "wrigley" in txt) and any(b in txt for b in POS_BASEBALL):
-        return True
+    inc_hit = any(k in t for k in KEY_INCLUDE) or any(p in t for p in PEOPLE)
+    bb_hit  = any(k in t for k in KEY_BASEBALL)
 
-    # Explicit team phrase
-    if "chicago cubs" in txt:
-        return True
+    return inc_hit and bb_hit
 
-    return False
 
-def normalize(feed_name, feed_url, e)->Dict:
-    title = clean(e.get("title") or "")
-    link = e.get("link") or e.get("id") or ""
-    summary = clean(e.get("summary") or e.get("description") or "")
-    pub = e.get("published") or e.get("updated") or ""
-    ts = 0
-    try:
-        if e.get("published_parsed"): ts = time.mktime(e.published_parsed)
-        elif e.get("updated_parsed"): ts = time.mktime(e.updated_parsed)
-    except Exception:
-        ts = 0
+def normalize(entry: Dict[str, Any], source: str) -> Dict[str, Any]:
+    title = norm(entry.get("title"))
+    link = norm(entry.get("link"))
+    summary = norm(entry.get("summary") or entry.get("description") or "")
+    ts = parse_datetime(entry)
+    dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+    nice = dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
     return {
-        "source": feed_name, "source_url": feed_url,
-        "domain": domain_of(link),
-        "title": title, "link": link, "summary": summary[:400],
-        "published": pub, "when": nice_when(ts, pub), "_ts": ts
+        "title": title,
+        "link": link,
+        "summary": summary,
+        "date": nice,
+        "ts": ts,
+        "source": source,
     }
 
-def dedupe(items:List[Dict])->List[Dict]:
-    seen, out = set(), []
-    for it in items:
-        k = it["link"] or (it["title"], it["source"])
-        if k in seen: continue
-        seen.add(k); out.append(it)
-    return out
 
-def main():
-    raw=[]
-    for f in FEEDS:
+def collect() -> int:
+    items: List[Dict[str, Any]] = []
+
+    for feed in FEEDS:
+        name = feed.get("name", "Unknown")
+        url = feed.get("url")
+        if not url:
+            continue
         try:
-            parsed = feedparser.parse(http_get(f["url"]))
-            name = parsed.feed.get("title", f["name"])
-            for e in parsed.get("entries", []):
-                it = normalize(name, f["url"], e)
-                if looks_cubs(it["title"], it["summary"], it["link"]):
-                    raw.append(it)
-        except Exception:
+            raw = fetch(url)
+            parsed = feedparser.parse(raw)
+            for e in parsed.entries:
+                n = normalize(e, name)
+                if allow_item(n["title"], n["summary"], name):
+                    items.append(n)
+        except Exception as e:
+            print(f"[collect] feed error: {name}: {e}", flush=True)
             continue
 
-    items = dedupe(raw)
-    # Sort newest first; _ts may be 0 for some feeds, so include published as tie-breaker
-    items.sort(key=lambda x:(x.get("_ts",0), x.get("published","")), reverse=True)
-    items = items[:MAX_ITEMS]  # <-- keep only the 50 most recent
-    payload = {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "items": items
-    }
-    with open(OUTFILE, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"Wrote {len(items)} items to {OUTFILE}")
+    # Newest-first + cap
+    items.sort(key=lambda x: x.get("ts", 0.0), reverse=True)
+    if MAX_ITEMS > 0:
+        items = items[:MAX_ITEMS]
 
-if __name__=="__main__":
-    main()
+    data = {
+        "items": items,
+        "meta": {
+            "generated_at": utc_now_iso(),
+            "count": len(items),
+            "max": MAX_ITEMS,
+        },
+    }
+
+    tmp = OUTPUT_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, OUTPUT_PATH)
+
+    print(f"[collect] wrote {len(items)} items (cap={MAX_ITEMS}) → {OUTPUT_PATH}", flush=True)
+    return len(items)
+
+
+if __name__ == "__main__":
+    collect()
