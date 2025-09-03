@@ -1,125 +1,109 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Chicago Cubs — MLB Feed (Flask server with protected /collect-open)
-
-Security:
-- Set env COLLECT_TOKEN="some-long-random-string"
-- /collect-open requires header: Authorization: Bearer <COLLECT_TOKEN>
-- If COLLECT_TOKEN is UNSET, /collect-open is OPEN (not recommended)
-
-Endpoints:
-- GET /               -> renders templates/index.html with items.json content
-- GET /items.json     -> returns the cached items (collector output)
-- GET /collect-open   -> kicks collect.py in a background thread (requires token if set)
-- GET /health         -> { ok: true, updated: "...", count: N }
-- GET /static/<file>  -> serves static assets (style.css, logo.png, etc.)
-"""
-
 import os
 import json
 import threading
-import subprocess
-from typing import Dict, Any
-from flask import Flask, jsonify, render_template, send_from_directory, request, abort
+import time
+from datetime import datetime, timezone
 
-# Import feed definitions and team name
-from feeds import FEEDS, STATIC_LINKS, TEAM_NAME
+from flask import Flask, render_template, send_file, send_from_directory, jsonify, request, abort
+
+from feeds import FEEDS, STATIC_LINKS
+import collect as collector  # must be this Cubs collect.py
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(APP_DIR, "items.json")
-COLLECT_SCRIPT = os.path.join(APP_DIR, "collect.py")
+ITEMS_PATH = os.path.join(APP_DIR, "items.json")
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+COLLECT_TOKEN = os.environ.get("COLLECT_TOKEN", "")       # token for /collect
+ENABLE_AUTO_COLLECT = os.environ.get("ENABLE_AUTO_COLLECT", "1") == "1"
+COLLECT_EVERY_SECONDS = int(os.environ.get("COLLECT_EVERY_SECONDS", "1800"))
+ENABLE_OPEN_COLLECT = os.environ.get("ENABLE_OPEN_COLLECT", "0") == "1"  # default OFF for safety
 
-# -------- helpers --------
+app = Flask(__name__, static_folder="static", template_folder="templates")
 
-def load_items() -> Dict[str, Any]:
-    """Load items.json produced by collect.py; tolerate missing/invalid file."""
-    if not os.path.exists(DATA_FILE):
-        return {"updated": None, "items": []}
+def _load_items():
+    if not os.path.exists(ITEMS_PATH):
+        return {"items": [], "meta": {"generated_at": None}}
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if not isinstance(data, dict):
-                return {"updated": None, "items": []}
-            data.setdefault("items", [])
-            return data
+        with open(ITEMS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception:
-        return {"updated": None, "items": []}
+        return {"items": [], "meta": {"generated_at": None}}
 
-def start_collect_async() -> None:
-    """Fire-and-forget run of collect.py in a background thread."""
-    def worker():
+def _ensure_first_build():
+    if not os.path.exists(ITEMS_PATH):
         try:
-            subprocess.run(
-                ["python3", COLLECT_SCRIPT],
-                cwd=APP_DIR,
-                check=False
-            )
-        except Exception:
-            # Swallow errors; /health + logs are where you’d check status
-            pass
-    threading.Thread(target=worker, daemon=True).start()
+            count = collector.collect()
+            print(f"[boot] collected {count} items", flush=True)
+        except Exception as e:
+            print(f"[boot] collect failed: {e}", flush=True)
 
-def require_collect_auth() -> None:
-    """Enforce Bearer token on /collect-open if COLLECT_TOKEN is set."""
-    token = os.environ.get("COLLECT_TOKEN", "").strip()
-    if not token:
-        # No token configured -> endpoint is open (for simple setups)
-        return
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        abort(401)
-    supplied = auth.split(" ", 1)[1].strip()
-    if supplied != token:
-        abort(403)
-
-# -------- routes --------
+def _auto_collect_loop():
+    while True:
+        try:
+            count = collector.collect()
+            ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            print(f"[auto] collected {count} items @ {ts}", flush=True)
+        except Exception as e:
+            print(f"[auto] collect failed: {e}", flush=True)
+        time.sleep(COLLECT_EVERY_SECONDS)
 
 @app.route("/")
 def index():
-    data = load_items()
-    return render_template(
-        "index.html",
-        team_name=TEAM_NAME,
-        updated=data.get("updated"),
-        items=data.get("items", []),
-        feeds=FEEDS,
-        quick_links=STATIC_LINKS,
-    )
+    data = _load_items()
+    items = data.get("items", [])
+    meta = data.get("meta", {})
+    return render_template("index.html", items=items, meta=meta, feeds=FEEDS, static_links=STATIC_LINKS)
 
 @app.route("/items.json")
 def items_json():
-    return jsonify(load_items())
+    if not os.path.exists(ITEMS_PATH):
+        return jsonify({"items": [], "meta": {"generated_at": None}})
+    return send_file(ITEMS_PATH, mimetype="application/json", conditional=True)
 
-@app.route("/collect-open", methods=["GET", "POST"])
-def collect_open():
-    require_collect_auth()
-    start_collect_async()
+# Token-protected manual collect
+@app.route("/collect")
+def run_collect():
+    token = request.args.get("token", "")
+    if not COLLECT_TOKEN or token != COLLECT_TOKEN:
+        abort(404)
+    try:
+        count = collector.collect()
+        ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        return jsonify({"ok": True, "count": count, "ts": ts})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+# Optional open collect (enable by setting ENABLE_OPEN_COLLECT=1)
+@app.route("/collect-open")
+def run_collect_open():
+    if not ENABLE_OPEN_COLLECT:
+        abort(404)
+    try:
+        count = collector.collect()
+        ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        return jsonify({"ok": True, "count": count, "ts": ts, "open": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/healthz")
+def healthz():
     return jsonify({"ok": True})
 
-@app.route("/health")
-def health():
-    data = load_items()
-    return jsonify({
-        "ok": True,
-        "updated": data.get("updated"),
-        "count": len(data.get("items", []))
-    })
+# Root icons for Safari/Chrome (harmless routes)
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(app.static_folder, "favicon.ico", mimetype="image/x-icon")
 
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory(app.static_folder, filename)
+@app.route("/apple-touch-icon.png")
+def apple_touch_icon():
+    return send_from_directory(app.static_folder, "apple-touch-icon.png", mimetype="image/png")
 
-# Optional: simple version endpoint using Railway/Git env vars
-@app.route("/version")
-def version():
-    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("GIT_COMMIT") or ""
-    return jsonify({"commit": sha[:12] if sha else None})
+# ---- Boot ----
+_ensure_first_build()
+if ENABLE_AUTO_COLLECT:
+    threading.Thread(target=_auto_collect_loop, daemon=True).start()
 
 if __name__ == "__main__":
-    # Local dev fallback (Railway sets PORT in production)
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=True)
