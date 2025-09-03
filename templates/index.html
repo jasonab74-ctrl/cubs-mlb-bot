@@ -11,10 +11,10 @@
     <!-- Header -->
     <div class="header">
       <div class="brand">
-        <!-- Retina-sharp logo: provide logo@2x.png in /static -->
         <img
           src="{{ url_for('static', filename='logo.png') }}"
-          srcset="{{ url_for('static', filename='logo.png') }} 1x, {{ url_for('static', filename='logo@2x.png') }} 2x"
+          srcset="{{ url_for('static', filename='logo.png') }} 1x,
+                  {{ url_for('static', filename='logo@2x.png') }} 2x"
           class="logo"
           alt="Cubs logo">
         <div>
@@ -26,12 +26,12 @@
         </div>
       </div>
 
-      <!-- Cubs win! button (plays/pauses fight song) -->
-      <button id="winBtn" class="fight-btn" onclick="toggleFightSong()" aria-label="Play Cubs fight song">Cubs win!</button>
-      <!-- Audio element -->
+      <!-- Cubs win! button -->
+      <button id="winBtn" class="fight-btn" onclick="toggleFightSong()">Cubs win!</button>
+      <!-- Audio element now points to fight-song.mp3 -->
       <audio
         id="fightSong"
-        src="{{ url_for('static', filename='fight_song.mp3') }}"
+        src="{{ url_for('static', filename='fight-song.mp3') }}"
         preload="auto"
         controlslist="nodownload noplaybackrate"
         playsinline>
@@ -84,24 +84,15 @@
   </div>
 
   <script>
-  // Fight song play/pause with button state
   function toggleFightSong() {
     const a = document.getElementById("fightSong");
     const b = document.getElementById("winBtn");
     if (!a) return;
-
     if (a.paused) {
       a.currentTime = 0;
-      a.play().then(() => {
-        b.textContent = "Cubs win! 🎵";
-      }).catch(() => {
-        // If it fails, it’s almost always a file path or iOS gesture issue.
-        // Open the file directly to confirm it loads: /static/fight_song.mp3
-        b.textContent = "Cubs win!";
-      });
+      a.play().then(() => { b.textContent = "Cubs win! 🎵"; }).catch(()=>{});
     } else {
-      a.pause();
-      a.currentTime = 0;
+      a.pause(); a.currentTime = 0;
       b.textContent = "Cubs win!";
     }
   }
