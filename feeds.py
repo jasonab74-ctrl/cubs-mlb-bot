@@ -8,7 +8,7 @@ FEEDS = [
     {"name": "Bing News — Chicago Cubs",
      "url": "https://www.bing.com/news/search?q=%22Chicago+Cubs%22&format=RSS"},
 
-    # ===== Major outlets (Cubs filters via Google News site: searches)
+    # ===== Major outlets (Cubs via site: searches)
     {"name": "Google — MLB.com (Cubs)",
      "url": "https://news.google.com/rss/search?q=site:mlb.com/cubs+OR+site:mlb.com/news+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
     {"name": "Google — ESPN (Cubs)",
@@ -21,19 +21,15 @@ FEEDS = [
      "url": "https://news.google.com/rss/search?q=site:theathletic.com+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
 
     # ===== Team blogs / insiders
-    {"name": "Cubs Insider (RSS)",
-     "url": "https://www.cubsinsider.com/feed/"},
-    {"name": "Bleacher Nation — Cubs",
-     "url": "https://www.bleachernation.com/cubs-rumors/feed/"},
-    {"name": "Bleed Cubbie Blue",
-     "url": "https://www.bleedcubbieblue.com/rss/index.xml"},
+    {"name": "Cubs Insider (RSS)", "url": "https://www.cubsinsider.com/feed/"},
+    {"name": "Bleacher Nation — Cubs", "url": "https://www.bleachernation.com/cubs-rumors/feed/"},
+    {"name": "Bleed Cubbie Blue", "url": "https://www.bleedcubbieblue.com/rss/index.xml"},
 
     # ===== Reddit
-    {"name": "Reddit — r/CHICubs",
-     "url": "https://www.reddit.com/r/CHICubs/.rss"},
+    {"name": "Reddit — r/CHICubs", "url": "https://www.reddit.com/r/CHICubs/.rss"},
 ]
 
-# Quick links (top buttons). Order & labels to match your UI.
+# Quick links (top buttons). Order & labels to match the UI.
 STATIC_LINKS = [
     {"label": "Cubs — Official",      "url": "https://www.mlb.com/cubs"},
     {"label": "Schedule",             "url": "https://www.mlb.com/cubs/schedule"},
