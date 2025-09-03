@@ -18,7 +18,7 @@
 <audio id="fightAudio" src="/static/fight-song.mp3" preload="auto"></audio>
 
 <nav class="quick">
-  <!-- Button label changed here -->
+  <!-- Button label always says Cubs win! -->
   <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Cubs win!</button>
   {% for text, url in quick_links %}
     <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
@@ -73,9 +73,9 @@
   const audio=document.getElementById('fightAudio');
   const fbtn=document.getElementById('fightBtn');
   if(audio&&fbtn){
-    // When playing, show "Pause Fight Song"; when paused, show "Cubs win!"
+    // Always keep text = "Cubs win!"
     const set=on=>{
-      fbtn.textContent = on ? 'Pause Fight Song' : 'Cubs win!';
+      fbtn.textContent = 'Cubs win!';
       fbtn.classList.toggle('on',on);
       fbtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     };
