@@ -1,96 +1,148 @@
+/* ===========================
+   Chicago Cubs — MLB Feed UI
+   (style-only; HTML/JS unchanged)
+   =========================== */
+
 :root{
-  /* Cubs colors */
-  --blue:#0E3386;      /* Cubs Royal */
-  --blue2:#0a2766;     /* darker blend */
-  --red:#CC3433;       /* Cubs Red */
+  /* Cubs palette */
+  --navy:#0E3386;
+  --red:#CC3433;
 
-  --bg:#f7f8fa; --card:#fff; --muted:#4a4a4a; --bd:#e5e9f1;
-  --shadow:0 10px 20px rgba(0,0,0,.06);
+  --bg: #f5f7fb;
+  --panel:#ffffff;
+  --text:#1a1a1a;
+  --muted:#6a6f7a;
+  --ring: rgba(14,51,134,.25);
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08);
+}
 
-  --pill-bg:#eef2f7;
-  --pill-bd:#d9e0ea;
-  --pill-bg-hover:#e8edf5;
-
-  --accent:#cbd6e4;
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1115;
+    --panel:#161922;
+    --text:#f0f3f8;
+    --muted:#a2a7b0;
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 12px 32px rgba(0,0,0,.55);
+  }
 }
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111}
-
-.header{background:linear-gradient(90deg,var(--blue),var(--blue2));color:#fff;padding:14px 16px}
-.brand{display:flex;gap:12px;align-items:center}
-.logo{
-  width:44px;height:44px;border-radius:10px;background:#fff;
-  object-fit:cover;object-position:center;border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 2px 6px rgba(0,0,0,.15)
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+  color:var(--text);
+  background:
+    radial-gradient(1200px 500px at 50% -40%, rgba(14,51,134,.08), transparent),
+    var(--bg);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
-h1{margin:0;font-size:20px}
-.sub{opacity:.95;font-size:12px}
 
-.quick{display:flex;gap:10px;flex-wrap:wrap;padding:10px 12px}
+/* Layout */
+.container{ max-width:980px; margin:0 auto; padding: clamp(12px,2.6vw,24px) }
+
+/* Header */
+.header{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; margin-bottom:10px;
+  padding:12px; border-radius:14px;
+  background: linear-gradient(90deg, rgba(14,51,134,.08), transparent);
+}
+.brand{ display:flex; align-items:center; gap:12px; min-width:260px }
+.logo{ width: clamp(52px,9vw,84px); height:auto; object-fit:contain }
+h1{ margin:0; line-height:1.05; font-size: clamp(26px,5.6vw,44px) }
+.sub{ color:var(--muted); font-size: clamp(12px,2.4vw,14px); margin-top:2px }
+
+/* Refresh button */
+.fight-btn{
+  appearance:none; border:0; cursor:pointer;
+  background: linear-gradient(180deg, #fff 0%, #f2f4f8 100%);
+  color: var(--navy); font-weight:700; font-size:14px;
+  padding:10px 14px; border-radius:999px; box-shadow:var(--shadow);
+  border:1px solid rgba(14,51,134,.15);
+}
+.fight-btn:hover{ filter:saturate(1.05) }
+.fight-btn:active{ transform:translateY(1px) }
+
+/* Quick links (bubbles) */
+.quick{
+  display:grid; gap:8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin:8px 0 10px 0;
+}
 .pill{
-  display:inline-block;padding:7px 12px;border-radius:999px;background:var(--pill-bg);
-  border:1px solid var(--pill-bd);font-weight:800;text-decoration:none;color:#111;
-  box-shadow:0 1px 2px rgba(0,0,0,.04)
+  display:flex; align-items:center; justify-content:center;
+  padding:8px 12px; border-radius:999px;
+  background: var(--panel);
+  border:1px solid rgba(14,51,134,.12);
+  text-decoration:none; color:var(--text);
+  box-shadow: var(--shadow);
+  font-size:14px; line-height:1.2; text-align:center;
 }
-.pill:hover{background:var(--pill-bg-hover)}
-.pill-primary{background:var(--red);color:#fff;border-color:var(--red)}
-.pill-primary.on{filter:brightness(.95)}
+.pill:hover{ border-color: var(--ring) }
 
-.sbar{padding:4px 12px 0}
-.sbar input{
-  width:100%;font:600 16px/1.25 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  padding:12px 14px;border-radius:12px;border:1px solid var(--bd);
-  box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff
+/* Controls */
+.controls{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px 0 }
+.input,.select{
+  flex:1 1 260px; padding:10px 12px; font-size:14px;
+  border-radius:10px; border:1px solid rgba(14,51,134,.15);
+  background:var(--panel); color:var(--text); box-shadow:var(--shadow);
+}
+.input::placeholder{ color:var(--muted) }
+.select{ max-width:220px }
+
+/* Notice */
+.notice{
+  background:#eaf0ff; color:#0b2a6b;
+  border:1px solid rgba(14,51,134,.2);
+  border-radius:10px; padding:8px 10px; margin:6px 0 10px 0; font-size:14px;
 }
 
-.suggest{position:relative}
-.suggest ul{
-  position:absolute;z-index:5;left:0;right:0;list-style:none;margin:6px 0 0;padding:6px;
-  background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.08);
-  max-height:280px;overflow:auto
+/* Articles */
+.items{ list-style:none; padding:0; margin:0; display:grid; gap:12px }
+.item{
+  background:var(--panel);
+  border:1px solid rgba(14,51,134,.12);
+  border-radius:14px; padding:12px;
+  box-shadow:var(--shadow);
+  transition: box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
 }
-.suggest li{padding:8px 10px;border-radius:8px;cursor:pointer}
-.suggest li:hover{background:#f4f4f4}
+.item:hover{ box-shadow:0 2px 6px rgba(0,0,0,.08), 0 14px 30px rgba(0,0,0,.12); border-color:var(--ring) }
 
-.sdropdown{position:relative}
-.sdropdown summary{list-style:none;cursor:pointer}
-.sdropdown[open] .menu{display:block}
-.menu{
-  display:none;position:absolute;z-index:10;top:38px;left:0;background:#fff;border:1px solid var(--bd);
-  border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.08);min-width:260px;max-height:260px;overflow:auto;padding:6px
-}
-.menu a{display:block;padding:6px 10px;border-radius:8px;color:#000;text-decoration:none}
-.menu a:hover{background:#f3f3f3}
-
-main{max-width:900px;margin:14px auto;padding:0 12px}
-.notice{background:#fff3cd;border:1px solid #ffe08a;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:none}
-
-.card{
-  background:var(--card); border:1px solid var(--bd); border-radius:14px;
-  padding:12px; margin:10px 0; box-shadow:var(--shadow);
-  position:relative; overflow:hidden;
-}
-.card::before{
-  content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
-  background:linear-gradient(var(--blue),var(--red)); opacity:.9;
-}
+.item-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap }
 .title{
-  font-size:17px;font-weight:900;line-height:1.25;color:#0f1114;text-decoration:none;margin:0
+  color:var(--text); text-decoration:none; font-weight:750;
+  font-size: clamp(16px,3.2vw,20px); line-height:1.3; flex:1 1 auto;
 }
-.summary{
-  margin:6px 0 0;color:#222;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden
+.title:hover{ text-decoration:underline }
+.badge{
+  margin-left:auto; font-size:12px; font-weight:600; white-space:nowrap;
+  color:#fff; background: var(--navy);
+  padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
 }
-.meta{
-  margin-top:10px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap
-}
-.chip{
-  background:#fff;border:1px solid var(--accent);color:#333;padding:2px 8px;border-radius:999px;
-  font-weight:700;font-size:12px;white-space:nowrap
-}
-.time{white-space:nowrap;opacity:.9}
 
-.empty{padding:28px 12px;text-align:center;color:var(--muted)}
-footer{max-width:900px;margin:20px auto 30px;padding:0 12px;color:#777}
-footer a{color:inherit;text-decoration:none}
-footer a:hover{text-decoration:underline}
+.meta{ color:var(--muted); font-size:12.5px; margin-top:4px }
+.desc{
+  margin:6px 0 0 0; color:#2f2f2f; font-size:14.5px; line-height:1.55;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* Footer */
+.footer{ text-align:center; color:var(--muted); margin:22px 0 8px 0; font-size:13px }
+
+/* Mobile tweaks */
+@media (max-width:560px){
+  .logo{ width:56px }
+  .fight-btn{ width:100% }
+  .quick{ grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:6px }
+  .pill{ padding:8px 10px; font-size:13.5px }
+  .select{ flex:1 1 160px; max-width:none }
+  .item{ border-radius:12px }
+}
+
+/* Focus rings */
+a:focus-visible, .pill:focus-visible, .input:focus-visible,
+.select:focus-visible, .fight-btn:focus-visible {
+  outline:3px solid var(--ring);
+  outline-offset:2px;
+}
