@@ -20,8 +20,11 @@
           </div>
         </div>
       </div>
-      <!-- Cubs win! button (just refreshes the page) -->
-      <button class="fight-btn" onclick="location.reload()" aria-label="Refresh feed">Cubs win!</button>
+
+      <!-- Cubs win! button (plays/pauses fight song) -->
+      <button class="fight-btn" onclick="toggleFightSong()" aria-label="Play Cubs fight song">Cubs win!</button>
+      <!-- Audio element (kept silent until user taps the button) -->
+      <audio id="fightSong" src="{{ url_for('static', filename='fight_song.mp3') }}"></audio>
     </div>
 
     <!-- Quick Links -->
@@ -70,6 +73,19 @@
   </div>
 
   <script>
+  // Play/pause fight song
+  function toggleFightSong() {
+    const a = document.getElementById("fightSong");
+    if (!a) return;
+    if (a.paused) {
+      a.currentTime = 0;
+      a.play().catch(()=>{/* ignored: user gesture not recognized on some browsers */});
+    } else {
+      a.pause();
+      a.currentTime = 0;
+    }
+  }
+
   function filterItems() {
     const q = document.getElementById("searchBox").value.toLowerCase();
     const f = document.getElementById("sourceFilter").value;
