@@ -7,7 +7,7 @@
 
 <header class="header">
   <div class="brand">
-    <img class="logo" src="/static/logo.png" alt="Team logo" />
+    <img class="logo" src="/static/logo.png" alt="Chicago Cubs logo" />
     <div>
       <h1>{{ team_name }}</h1>
       <div class="sub">Updated: <span id="updated">{{ updated or "—" }}</span></div>
@@ -18,10 +18,19 @@
 <audio id="fightAudio" src="/static/fight-song.mp3" preload="auto"></audio>
 
 <nav class="quick">
-  <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Play Fight Song</button>
+  <!-- Button label changed here -->
+  <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Cubs win!</button>
   {% for text, url in quick_links %}
     <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
   {% endfor %}
+  <details class="sdropdown">
+    <summary class="pill">Sources ▾</summary>
+    <div class="menu">
+      {% for f in feeds %}
+        <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>
+      {% endfor %}
+    </div>
+  </details>
 </nav>
 
 <div class="sbar">
@@ -52,7 +61,11 @@
 </main>
 
 <footer>
-  <small>All content aggregated from public sources.</small>
+  <small>Feeds:
+    {% for f in feeds %}
+      <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </small>
 </footer>
 
 <script>
@@ -60,9 +73,19 @@
   const audio=document.getElementById('fightAudio');
   const fbtn=document.getElementById('fightBtn');
   if(audio&&fbtn){
-    const set=on=>{fbtn.textContent=on?'Pause Fight Song':'Play Fight Song';fbtn.classList.toggle('on',on);fbtn.setAttribute('aria-pressed',on?'true':'false');};
+    // When playing, show "Pause Fight Song"; when paused, show "Cubs win!"
+    const set=on=>{
+      fbtn.textContent = on ? 'Pause Fight Song' : 'Cubs win!';
+      fbtn.classList.toggle('on',on);
+      fbtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    };
     set(false);
-    fbtn.onclick=async()=>{try{if(audio.paused){await audio.play();set(true);}else{audio.pause();set(false);}}catch(e){}};
+    fbtn.onclick=async()=>{
+      try{
+        if(audio.paused){ await audio.play(); set(true); }
+        else{ audio.pause(); set(false); }
+      }catch(e){}
+    };
     audio.addEventListener('ended',()=>set(false));
     audio.addEventListener('pause',()=>set(false));
     audio.addEventListener('play',()=>set(true));
@@ -70,7 +93,6 @@
 
   const feedEl=document.getElementById('feed');
   const updatedEl=document.getElementById('updated');
-
   function domainFrom(u){try{return new URL(u).hostname.replace(/^www\\./,'');}catch(e){return '';}}
 
   function render(items,updated){
@@ -101,7 +123,7 @@
       }
     }catch(e){}
   }
-  setInterval(check,180000); // 3 min
+  setInterval(check,180000); // every 3 minutes
 
   let cacheItems={{ items|tojson }};
   const q=document.getElementById('search'),sugg=document.getElementById('sugg');
