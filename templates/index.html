@@ -1,127 +1,160 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Chicago Cubs — MLB Feed</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-</head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="brand">
-        <img
-          src="{{ url_for('static', filename='logo.png') }}"
-          srcset="{{ url_for('static', filename='logo.png') }} 1x,
-                  {{ url_for('static', filename='logo@2x.png') }} 2x"
-          class="logo"
-          alt="Cubs logo">
-        <div>
-          <h1>Chicago Cubs — MLB Feed</h1>
-          <div class="sub">
-            <span class="count">{{ items|length }} articles</span> ·
-            <span class="stamp">Updated: {{ meta.generated_at or '—' }}</span>
-          </div>
-        </div>
-      </div>
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ team_name }}</title>
 
-      <!-- Cubs win! button -->
-      <button id="winBtn" class="fight-btn" onclick="toggleFightSong()">Cubs win!</button>
-      <!-- Audio element now points to fight-song.mp3 -->
-      <audio
-        id="fightSong"
-        src="{{ url_for('static', filename='fight-song.mp3') }}"
-        preload="auto"
-        controlslist="nodownload noplaybackrate"
-        playsinline>
-      </audio>
+<!-- Icons / PWA -->
+<link rel="icon" href="/static/logo.png"> <!-- fallback -->
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/static/site.webmanifest">
+<meta name="theme-color" content="#0E3386">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link rel="stylesheet" href="/static/style.css">
+
+<header class="header">
+  <div class="brand">
+    <img class="logo" src="/static/logo.png" alt="Chicago Cubs logo" />
+    <div>
+      <h1>{{ team_name }}</h1>
+      <div class="sub">Updated: <span id="updated">{{ updated or "—" }}</span></div>
     </div>
-
-    <!-- Quick Links -->
-    <div class="quick">
-      {% for link in static_links %}
-        <a class="pill" href="{{ link.url }}" target="_blank" rel="noopener">{{ link.label }}</a>
-      {% endfor %}
-    </div>
-
-    <!-- Controls -->
-    <div class="controls">
-      <input type="search" class="input" id="searchBox" placeholder="Search articles…"
-             oninput="filterItems()">
-      <select class="select" id="sourceFilter" onchange="filterItems()">
-        <option value="">All Sources</option>
-        {% for f in feeds %}
-          <option value="{{ f.name }}">{{ f.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Notice -->
-    <div id="notice" class="notice" style="display:none;">
-      New items available — <a href="#" onclick="location.reload()">refresh now</a>.
-    </div>
-
-    <!-- Articles -->
-    <ul class="items" id="feedList">
-      {% for it in items %}
-        <li class="item" data-source="{{ it.source }}">
-          <div class="item-head">
-            <a class="title" href="{{ it.link }}" target="_blank" rel="noopener">{{ it.title }}</a>
-            <span class="badge">{{ it.source }}</span>
-          </div>
-          <div class="meta">{{ it.date }}</div>
-          {% if it.summary %}
-            <p class="desc">
-              {{ it.summary|striptags|replace('\n',' ')|replace('\r',' ')|truncate(260, True, '…') }}
-            </p>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-
-    <div class="footer">Go Cubs Go — Chicago Cubs MLB Feed</div>
   </div>
+</header>
 
-  <script>
-  function toggleFightSong() {
-    const a = document.getElementById("fightSong");
-    const b = document.getElementById("winBtn");
-    if (!a) return;
-    if (a.paused) {
-      a.currentTime = 0;
-      a.play().then(() => { b.textContent = "Cubs win! 🎵"; }).catch(()=>{});
-    } else {
-      a.pause(); a.currentTime = 0;
-      b.textContent = "Cubs win!";
-    }
+<audio id="fightAudio" src="/static/fight-song.mp3" preload="auto"></audio>
+
+<nav class="quick">
+  <!-- Button label stays constant -->
+  <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Cubs win!</button>
+  {% for text, url in quick_links %}
+    <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
+  {% endfor %}
+  <details class="sdropdown">
+    <summary class="pill">Sources ▾</summary>
+    <div class="menu">
+      {% for f in feeds %}
+        <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>
+      {% endfor %}
+    </div>
+  </details>
+</nav>
+
+<div class="sbar">
+  <div class="suggest">
+    <input id="search" type="search" placeholder="Search articles (title, summary, source)…" autocomplete="off">
+    <ul id="sugg" hidden></ul>
+  </div>
+</div>
+
+<main>
+  <div id="notice" class="notice">New items available — <button id="applyBtn" class="pill">Refresh</button></div>
+  <section id="feed">
+    {% if not items %}
+      <div class="empty">No articles yet. Tap Refresh in a minute or use /collect-open.</div>
+    {% else %}
+      {% for it in items %}
+      <article class="card">
+        <a class="title" href="{{ it.link }}" target="_blank" rel="noopener">{{ it.title }}</a>
+        {% if it.summary %}<p class="summary">{{ it.summary }}</p>{% endif %}
+        <div class="meta">
+          <span class="chip">{{ it.domain or it.source }}</span>
+          {% if it.when %}<time class="time">{{ it.when }}</time>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    {% endif %}
+  </section>
+</main>
+
+<footer>
+  <small>Feeds:
+    {% for f in feeds %}
+      <a href="{{ f.url }}" target="_blank" rel="noopener">{{ f.name }}</a>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </small>
+</footer>
+
+<script>
+(function(){
+  const audio=document.getElementById('fightAudio');
+  const fbtn=document.getElementById('fightBtn');
+  if(audio&&fbtn){
+    // Always display "Cubs win!"
+    const set=on=>{
+      fbtn.textContent='Cubs win!';
+      fbtn.classList.toggle('on',on);
+      fbtn.setAttribute('aria-pressed', on?'true':'false');
+    };
+    set(false);
+    fbtn.onclick=async()=>{
+      try{
+        if(audio.paused){ await audio.play(); set(true); }
+        else{ audio.pause(); set(false); }
+      }catch(e){}
+    };
+    audio.addEventListener('ended',()=>set(false));
+    audio.addEventListener('pause',()=>set(false));
+    audio.addEventListener('play',()=>set(true));
   }
 
-  function filterItems() {
-    const q = document.getElementById("searchBox").value.toLowerCase();
-    const f = document.getElementById("sourceFilter").value;
-    document.querySelectorAll("#feedList .item").forEach(it => {
-      const text = it.innerText.toLowerCase();
-      const src  = it.getAttribute("data-source");
-      const show = (!q || text.includes(q)) && (!f || src === f);
-      it.style.display = show ? "" : "none";
-    });
+  const feedEl=document.getElementById('feed');
+  const updatedEl=document.getElementById('updated');
+  function domainFrom(u){try{return new URL(u).hostname.replace(/^www\\./,'');}catch(e){return '';}}
+
+  function render(items,updated){
+    if(updated) updatedEl.textContent=updated;
+    feedEl.innerHTML=(items||[]).map(it=>`
+      <article class="card">
+        <a class="title" href="${it.link}" target="_blank" rel="noopener">${it.title}</a>
+        ${it.summary?`<p class="summary">${it.summary}</p>`:''}
+        <div class="meta">
+          <span class="chip">${it.domain||domainFrom(it.link)||it.source||'Source'}</span>
+          ${it.when?`<time class="time">${it.when}</time>`:''}
+        </div>
+      </article>
+    `).join('')||'<div class="empty">No articles.</div>';
   }
 
-  async function checkUpdates() {
-    try {
-      const res = await fetch("/items.json", {cache:"no-store"});
-      const data = await res.json();
-      const lastRun = data?.meta?.generated_at || data?.meta?.last_run?.ts;
-      const stamp = document.querySelector(".stamp");
-      if (stamp && lastRun) stamp.textContent = "Updated: " + lastRun;
-      const shown = document.querySelectorAll("#feedList .item").length;
-      if (data.items && data.items.length > shown) {
-        document.getElementById("notice").style.display="block";
+  let lastUpdated="{{ updated or '' }}";
+  const notice=document.getElementById('notice');
+  const applyBtn=document.getElementById('applyBtn');
+
+  async function check(){
+    try{
+      const res=await fetch('/items.json',{cache:'no-store'});
+      const j=await res.json();
+      if(j.updated && j.updated!==lastUpdated){
+        notice.style.display='block';
+        applyBtn.onclick=()=>{lastUpdated=j.updated;render(j.items,j.updated);notice.style.display='none';};
       }
-    } catch(e) { console.error("Update check failed", e); }
+    }catch(e){}
   }
-  setInterval(checkUpdates, 300000); // every 5 min
-  </script>
-</body>
-</html>
+  setInterval(check,180000);
+
+  let cacheItems={{ items|tojson }};
+  const q=document.getElementById('search'),sugg=document.getElementById('sugg');
+  function filterLocal(term){
+    const t=term.trim().toLowerCase();
+    if(!t){sugg.hidden=true;render(cacheItems,null);return [];}
+    const hits=cacheItems.filter(it=>
+      (it.title||'').toLowerCase().includes(t)||
+      (it.summary||'').toLowerCase().includes(t)||
+      (it.source||'').toLowerCase().includes(t)||
+      (it.link||'').toLowerCase().includes(t)
+    );
+    sugg.innerHTML=hits.slice(0,8).map(it=>`<li data-link="${it.link}">${it.title}</li>`).join('')||`<li>No matches</li>`;
+    sugg.hidden=false;
+    sugg.querySelectorAll('li[data-link]').forEach(li=>{li.onclick=()=>window.open(li.dataset.link,'_blank');});
+    return hits;
+  }
+  q.addEventListener('input',()=>filterLocal(q.value));
+  q.addEventListener('keydown',(e)=>{
+    if(e.key==='Enter'){e.preventDefault();render(filterLocal(q.value)||[],null);sugg.hidden=true;}
+    if(e.key==='Escape'){q.value='';sugg.hidden=true;render(cacheItems,null);}
+  });
+})();
+</script>
