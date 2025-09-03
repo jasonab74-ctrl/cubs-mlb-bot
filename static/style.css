@@ -1,10 +1,8 @@
 /* ===========================
    Chicago Cubs — MLB Feed UI
-   (style-only; HTML/JS unchanged)
    =========================== */
 
 :root{
-  /* Cubs palette */
   --navy:#0E3386;
   --red:#CC3433;
 
@@ -49,11 +47,23 @@ body{
   background: linear-gradient(90deg, rgba(14,51,134,.08), transparent);
 }
 .brand{ display:flex; align-items:center; gap:12px; min-width:260px }
-.logo{ width: clamp(52px,9vw,84px); height:auto; object-fit:contain }
+
+/* Crisp logo: smaller CSS width + high-res source + optimize contrast */
+.logo{
+  width: clamp(52px,9vw,72px);
+  height:auto;
+  object-fit:contain;
+  image-rendering:-webkit-optimize-contrast;
+  image-rendering:crisp-edges; /* some browsers */
+  border-radius:12px; /* matches your older rounded badge look */
+  box-shadow: var(--shadow);
+  background:#fff; /* keeps the white badge behind the logo mark */
+}
+
 h1{ margin:0; line-height:1.05; font-size: clamp(26px,5.6vw,44px) }
 .sub{ color:var(--muted); font-size: clamp(12px,2.4vw,14px); margin-top:2px }
 
-/* Refresh button */
+/* Cubs win button */
 .fight-btn{
   appearance:none; border:0; cursor:pointer;
   background: linear-gradient(180deg, #fff 0%, #f2f4f8 100%);
@@ -146,3 +156,6 @@ a:focus-visible, .pill:focus-visible, .input:focus-visible,
   outline:3px solid var(--ring);
   outline-offset:2px;
 }
+
+/* Hide the built-in audio UI */
+audio#fightSong{ display:none; }
