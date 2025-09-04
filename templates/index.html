@@ -31,8 +31,7 @@
   </header>
 
   <nav class="links">
-    {% from "macros.html" import pill_list %}
-    {{ pill_list() }}
+    <!-- Quick links row intentionally omitted for stability -->
     <div id="newItemsBanner" class="banner hidden">New items available — <a href="#" id="reloadLink">refresh</a></div>
   </nav>
 
@@ -58,10 +57,6 @@
     {% endif %}
   </main>
 
-  <template id="pill-template">
-    <a class="pill" target="_blank" rel="noopener"></a>
-  </template>
-
   <script>
     // Human time helpers
     function fmtTime(ts) {
@@ -82,7 +77,6 @@
       return `${d.toLocaleDateString([], optsDay)} • ${d.toLocaleTimeString([], optsTime)}`;
     }
 
-    // Set initial "Updated" and per-item times
     function hydrateTimes() {
       const up = document.getElementById('updatedLabel');
       if (up && up.dataset.ts) {
@@ -93,7 +87,6 @@
         t.textContent = fmtTime(ts);
       });
     }
-
     hydrateTimes();
     setInterval(hydrateTimes, 60 * 1000);
 
@@ -118,16 +111,16 @@
     }
     setInterval(checkForUpdates, POLL_MS);
 
-    document.getElementById('reloadLink')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.reload();
-    });
-
     // Fight song / "Cubs Win" button
     const song = document.getElementById('song');
     document.getElementById('songBtn')?.addEventListener('click', () => {
       if (!song) return;
       if (song.paused) song.play(); else song.pause();
+    });
+
+    document.getElementById('reloadLink')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.reload();
     });
   </script>
 </body>
