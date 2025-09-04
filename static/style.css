@@ -1,10 +1,10 @@
 :root {
-  --bg: #0c1220;          /* deep navy-tinted background */
-  --card: #111a2b;        /* card background */
-  --text: #f5f7fa;        /* primary text */
-  --muted: #9fb0c7;       /* muted text */
-  --primary: #0e3386;     /* Cubbie Blue */
-  --accent: #cc3433;      /* Cubs Red */
+  --bg: #0c1220;
+  --card: #111a2b;
+  --text: #f5f7fa;
+  --muted: #9fb0c7;
+  --primary: #0e3386; /* Cubbie Blue */
+  --accent: #cc3433;  /* Cubs Red */
   --pill-bg: #101b31;
   --pill-border: #2a3c69;
   --shadow: rgba(0,0,0,0.25);
@@ -27,6 +27,10 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 
 .header-right { display: flex; align-items: center; gap: 8px; }
 
+.links { padding: 10px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .pill {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 12px; font-size: 13px; font-weight: 600;
@@ -36,7 +40,33 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 }
 .pill:hover { border-color: var(--primary); }
 
-.links { padding: 10px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sources {
+  background: var(--card);
+  border: 1px solid #1e2a46;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.sources > summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 700;
+  outline: none;
+}
+.sources > summary::-webkit-details-marker { display: none; }
+.sources[open] > summary { color: var(--accent); }
+
+.source-list {
+  margin: 8px 0 0 0; padding-left: 16px;
+}
+.source-list li {
+  margin: 4px 0;
+}
+.source-list a {
+  color: #fff; text-decoration: none;
+}
+.source-list a:hover {
+  color: var(--accent); text-decoration: underline;
+}
 
 .banner {
   padding: 8px 12px; background: var(--accent); color: white; border-radius: 999px; font-weight: 700;
