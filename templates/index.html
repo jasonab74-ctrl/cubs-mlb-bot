@@ -38,22 +38,22 @@
         {% endfor %}
       </div>
     {% endif %}
-
-    {% if sources and sources|length > 0 %}
-      <details class="sources">
-        <summary>News Sources</summary>
-        <ul class="source-list">
-          {% for s in sources %}
-            <li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a></li>
-          {% endfor %}
-        </ul>
-      </details>
-    {% endif %}
-
-    <div id="newItemsBanner" class="banner hidden">New items available — <a href="#" id="reloadLink">refresh</a></div>
   </nav>
 
-  <main id="feed">
+  {% if sources and sources|length > 0 %}
+  <section class="sources-section">
+    <div class="section-title">
+      <span class="caret"></span> News Sources
+    </div>
+    <ul class="source-list">
+      {% for s in sources %}
+        <li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <main id="feed" class="cards">
     {% if items and items|length > 0 %}
       {% for it in items %}
       <article class="card">
@@ -61,7 +61,7 @@
           {{ it.title }}
         </a>
         <div class="meta">
-          <span>{{ it.source or it.by }}</span>
+          <span class="source">{{ it.source or it.by }}</span>
           <span>•</span>
           <time data-ts="{{ '%.0f' % it.published_ts }}"></time>
         </div>
@@ -71,44 +71,33 @@
       </article>
       {% endfor %}
     {% else %}
-      <div class="empty">No items yet. The collector will populate this soon.</div>
+      <div class="empty">No items yet. Run the collector to populate this.</div>
     {% endif %}
   </main>
 
+  <div class="toolbar">
+    <div id="newItemsBanner" class="banner hidden">New items available — <a href="#" id="reloadLink">refresh</a></div>
+  </div>
+
   <script>
-    // Human time helpers
     function fmtTime(ts) {
       const d = new Date(ts * 1000);
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const dayMs = 86400000;
-
       const optsTime = { hour: 'numeric', minute: '2-digit' };
       const optsDay  = { month: 'short', day: 'numeric' };
-
-      if (d.getTime() >= today) {
-        return `Today • ${d.toLocaleTimeString([], optsTime)}`;
-      }
-      if (d.getTime() >= today - dayMs) {
-        return `Yesterday • ${d.toLocaleTimeString([], optsTime)}`;
-      }
+      if (d.getTime() >= today) return `Today • ${d.toLocaleTimeString([], optsTime)}`;
+      if (d.getTime() >= today - dayMs) return `Yesterday • ${d.toLocaleTimeString([], optsTime)}`;
       return `${d.toLocaleDateString([], optsDay)} • ${d.toLocaleTimeString([], optsTime)}`;
     }
-
     function hydrateTimes() {
       const up = document.getElementById('updatedLabel');
-      if (up && up.dataset.ts) {
-        up.textContent = fmtTime(parseInt(up.dataset.ts, 10));
-      }
-      document.querySelectorAll('time[data-ts]').forEach(t => {
-        const ts = parseInt(t.dataset.ts, 10);
-        t.textContent = fmtTime(ts);
-      });
+      if (up && up.dataset.ts) up.textContent = fmtTime(parseInt(up.dataset.ts, 10));
+      document.querySelectorAll('time[data-ts]').forEach(t => t.textContent = fmtTime(parseInt(t.dataset.ts, 10)));
     }
-    hydrateTimes();
-    setInterval(hydrateTimes, 60 * 1000);
+    hydrateTimes(); setInterval(hydrateTimes, 60 * 1000);
 
-    // New items banner (client-side poll)
     const POLL_MS = 5 * 60 * 1000;
     let lastCount = document.querySelectorAll('#feed .card').length;
 
@@ -117,29 +106,16 @@
         const res = await fetch('/items.json', { cache: 'no-store' });
         const data = await res.json();
         const count = (data.items || []).length;
-        if (count > lastCount) {
-          document.getElementById('newItemsBanner').classList.remove('hidden');
-        }
+        if (count > lastCount) document.getElementById('newItemsBanner').classList.remove('hidden');
         const up = document.getElementById('updatedLabel');
-        if (up && data.updated_ts) {
-          up.dataset.ts = String(Math.floor(data.updated_ts));
-          hydrateTimes();
-        }
+        if (up && data.updated_ts) { up.dataset.ts = String(Math.floor(data.updated_ts)); hydrateTimes(); }
       } catch (e) {}
     }
     setInterval(checkForUpdates, POLL_MS);
 
-    // Fight song / "Cubs Win" button
     const song = document.getElementById('song');
-    document.getElementById('songBtn')?.addEventListener('click', () => {
-      if (!song) return;
-      if (song.paused) song.play(); else song.pause();
-    });
-
-    document.getElementById('reloadLink')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.reload();
-    });
+    document.getElementById('songBtn')?.addEventListener('click', () => { if (!song) return; if (song.paused) song.play(); else song.pause(); });
+    document.getElementById('reloadLink')?.addEventListener('click', (e) => { e.preventDefault(); window.location.reload(); });
   </script>
 </body>
 </html>
