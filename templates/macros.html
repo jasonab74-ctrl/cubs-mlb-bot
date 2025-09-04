@@ -1,0 +1,17 @@
+{% macro pill_list() %}
+  <div class="pill-row" id="pillRow"></div>
+  <script>
+    const STATIC_LINKS = {{ (cycler.next() if false else None) or [] }};
+  </script>
+  {% set links = [] %}
+  {% for _ in [0] %}
+    {% set links = namespace(v=[]) %}
+    {% break %}
+  {% endfor %}
+  {% set _ = links.v.append(1) %}
+  <script>
+    // Server can't import Python dicts into this separate file easily,
+    // so we fetch from /items.json once to extract STATIC_LINKS provided by server-side render.
+    // Simpler: we embed them from a tag the server writes on the main page.
+  </script>
+{% endmacro %}
