@@ -1,161 +1,86 @@
-/* ===========================
-   Chicago Cubs — MLB Feed UI
-   =========================== */
-
-:root{
-  --navy:#0E3386;
-  --red:#CC3433;
-
-  --bg: #f5f7fb;
-  --panel:#ffffff;
-  --text:#1a1a1a;
-  --muted:#6a6f7a;
-  --ring: rgba(14,51,134,.25);
-  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.08);
+:root {
+  --bg: #0c1220;          /* deep navy-tinted background */
+  --card: #111a2b;        /* card background */
+  --text: #f5f7fa;        /* primary text */
+  --muted: #9fb0c7;       /* muted text */
+  --primary: #0e3386;     /* Cubbie Blue */
+  --accent: #cc3433;      /* Cubs Red */
+  --pill-bg: #101b31;
+  --pill-border: #2a3c69;
+  --shadow: rgba(0,0,0,0.25);
 }
 
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#0f1115;
-    --panel:#161922;
-    --text:#f0f3f8;
-    --muted:#a2a7b0;
-    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 12px 32px rgba(0,0,0,.55);
-  }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 2px solid var(--primary);
+  position: sticky; top: 0; background: linear-gradient(0deg, rgba(14,51,134,0.25), rgba(14,51,134,0.25)), var(--bg);
+  backdrop-filter: blur(4px); z-index: 30;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family: ui-sans-serif,-apple-system,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-  color:var(--text);
-  background:
-    radial-gradient(1200px 500px at 50% -40%, rgba(14,51,134,.08), transparent),
-    var(--bg);
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+.header-left { display: flex; align-items: center; gap: 12px; }
+.team-logo { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 6px var(--shadow); background: #fff; }
+.title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.2px; }
+.updated { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; font-size: 13px; font-weight: 600;
+  color: var(--text); background: var(--pill-bg); border: 1px solid var(--pill-border);
+  border-radius: 999px; cursor: pointer; text-decoration: none;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+.pill:hover { border-color: var(--primary); }
+
+.links { padding: 10px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.banner {
+  padding: 8px 12px; background: var(--accent); color: white; border-radius: 999px; font-weight: 700;
+}
+.banner.hidden { display: none; }
+
+#feed { max-width: 900px; margin: 10px auto 60px; padding: 0 12px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid #1e2a46;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 12px auto;
+  box-shadow: 0 4px 10px var(--shadow);
 }
 
-/* Layout */
-.container{ max-width:980px; margin:0 auto; padding: clamp(12px,2.6vw,24px) }
-
-/* Header */
-.header{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:14px; flex-wrap:wrap; margin-bottom:10px;
-  padding:12px; border-radius:14px;
-  background: linear-gradient(90deg, rgba(14,51,134,.08), transparent);
+.card-title {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 18px;
+  color: #ffffff;
+  text-decoration: none;
 }
-.brand{ display:flex; align-items:center; gap:12px; min-width:260px }
+.card-title:hover { color: var(--accent); text-decoration: underline; }
 
-/* Crisp logo: smaller CSS width + high-res source + optimize contrast */
-.logo{
-  width: clamp(52px,9vw,72px);
-  height:auto;
-  object-fit:contain;
-  image-rendering:-webkit-optimize-contrast;
-  image-rendering:crisp-edges; /* some browsers */
-  border-radius:12px; /* matches your older rounded badge look */
-  box-shadow: var(--shadow);
-  background:#fff; /* keeps the white badge behind the logo mark */
+.meta {
+  display: inline-flex; gap: 8px; align-items: center;
+  color: var(--muted); font-size: 12px; margin-top: 6px;
 }
 
-h1{ margin:0; line-height:1.05; font-size: clamp(26px,5.6vw,44px) }
-.sub{ color:var(--muted); font-size: clamp(12px,2.4vw,14px); margin-top:2px }
-
-/* Cubs win button */
-.fight-btn{
-  appearance:none; border:0; cursor:pointer;
-  background: linear-gradient(180deg, #fff 0%, #f2f4f8 100%);
-  color: var(--navy); font-weight:700; font-size:14px;
-  padding:10px 14px; border-radius:999px; box-shadow:var(--shadow);
-  border:1px solid rgba(14,51,134,.15);
-}
-.fight-btn:hover{ filter:saturate(1.05) }
-.fight-btn:active{ transform:translateY(1px) }
-
-/* Quick links (bubbles) */
-.quick{
-  display:grid; gap:8px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  margin:8px 0 10px 0;
-}
-.pill{
-  display:flex; align-items:center; justify-content:center;
-  padding:8px 12px; border-radius:999px;
-  background: var(--panel);
-  border:1px solid rgba(14,51,134,.12);
-  text-decoration:none; color:var(--text);
-  box-shadow: var(--shadow);
-  font-size:14px; line-height:1.2; text-align:center;
-}
-.pill:hover{ border-color: var(--ring) }
-
-/* Controls */
-.controls{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px 0 }
-.input,.select{
-  flex:1 1 260px; padding:10px 12px; font-size:14px;
-  border-radius:10px; border:1px solid rgba(14,51,134,.15);
-  background:var(--panel); color:var(--text); box-shadow:var(--shadow);
-}
-.input::placeholder{ color:var(--muted) }
-.select{ max-width:220px }
-
-/* Notice */
-.notice{
-  background:#eaf0ff; color:#0b2a6b;
-  border:1px solid rgba(14,51,134,.2);
-  border-radius:10px; padding:8px 10px; margin:6px 0 10px 0; font-size:14px;
+.summary {
+  color: #dbe7ff;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 10px;
 }
 
-/* Articles */
-.items{ list-style:none; padding:0; margin:0; display:grid; gap:12px }
-.item{
-  background:var(--panel);
-  border:1px solid rgba(14,51,134,.12);
-  border-radius:14px; padding:12px;
-  box-shadow:var(--shadow);
-  transition: box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
+.empty {
+  opacity: 0.8; text-align: center; margin: 40px 0;
 }
-.item:hover{ box-shadow:0 2px 6px rgba(0,0,0,.08), 0 14px 30px rgba(0,0,0,.12); border-color:var(--ring) }
-
-.item-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap }
-.title{
-  color:var(--text); text-decoration:none; font-weight:750;
-  font-size: clamp(16px,3.2vw,20px); line-height:1.3; flex:1 1 auto;
-}
-.title:hover{ text-decoration:underline }
-.badge{
-  margin-left:auto; font-size:12px; font-weight:600; white-space:nowrap;
-  color:#fff; background: var(--navy);
-  padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.15);
-}
-
-.meta{ color:var(--muted); font-size:12.5px; margin-top:4px }
-.desc{
-  margin:6px 0 0 0; color:#2f2f2f; font-size:14.5px; line-height:1.55;
-  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
-}
-
-/* Footer */
-.footer{ text-align:center; color:var(--muted); margin:22px 0 8px 0; font-size:13px }
 
 /* Mobile tweaks */
-@media (max-width:560px){
-  .logo{ width:56px }
-  .fight-btn{ width:100% }
-  .quick{ grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:6px }
-  .pill{ padding:8px 10px; font-size:13.5px }
-  .select{ flex:1 1 160px; max-width:none }
-  .item{ border-radius:12px }
+@media (max-width: 600px) {
+  .title { font-size: 18px; }
+  .team-logo { width: 36px; height: 36px; }
 }
-
-/* Focus rings */
-a:focus-visible, .pill:focus-visible, .input:focus-visible,
-.select:focus-visible, .fight-btn:focus-visible {
-  outline:3px solid var(--ring);
-  outline-offset:2px;
-}
-
-/* Hide the built-in audio UI */
-audio#fightSong{ display:none; }
