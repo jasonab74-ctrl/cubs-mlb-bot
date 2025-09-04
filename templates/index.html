@@ -4,7 +4,7 @@
 <title>{{ team_name }}</title>
 
 <!-- Icons / PWA -->
-<link rel="icon" href="/static/logo.png"> <!-- fallback -->
+<link rel="icon" href="/static/logo.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
@@ -13,7 +13,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+<!-- Load external CSS -->
 <link rel="stylesheet" href="/static/style.css">
+
+<!-- Fallback CSS so Sources menu never dumps open if style.css is cached/missed -->
+<style>
+  .sdropdown > .menu { display:none; }
+  .sdropdown[open] > .menu { display:block; }
+  .menu a { text-decoration:none; color:#000; }
+</style>
 
 <header class="header">
   <div class="brand">
@@ -28,7 +36,6 @@
 <audio id="fightAudio" src="/static/fight-song.mp3" preload="auto"></audio>
 
 <nav class="quick">
-  <!-- Button label stays constant -->
   <button id="fightBtn" class="pill pill-primary" aria-pressed="false">Cubs win!</button>
   {% for text, url in quick_links %}
     <a class="pill" href="{{ url }}" target="_blank" rel="noopener">{{ text }}</a>
@@ -83,7 +90,6 @@
   const audio=document.getElementById('fightAudio');
   const fbtn=document.getElementById('fightBtn');
   if(audio&&fbtn){
-    // Always display "Cubs win!"
     const set=on=>{
       fbtn.textContent='Cubs win!';
       fbtn.classList.toggle('on',on);
