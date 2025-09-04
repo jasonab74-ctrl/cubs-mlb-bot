@@ -1,45 +1,37 @@
-# feeds.py — Chicago Cubs sources (used by collect.py)
-# FEEDS drives the Sources dropdown. STATIC_LINKS drives the top buttons.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Chicago Cubs — Feed list and quick links
+Edit FEEDS to add/remove sources. Prefer team-specific pages when possible.
+"""
 
 FEEDS = [
-    # ===== Broad Cubs aggregators
-    {"name": "Google News — Chicago Cubs",
-     "url": "https://news.google.com/rss/search?q=%22Chicago+Cubs%22+OR+Cubs&hl=en-US&gl=US&ceid=US:en"},
-    {"name": "Bing News — Chicago Cubs",
-     "url": "https://www.bing.com/news/search?q=%22Chicago+Cubs%22&format=RSS"},
-
-    # ===== Major outlets (Cubs via site: searches)
-    {"name": "Google — MLB.com (Cubs)",
-     "url": "https://news.google.com/rss/search?q=site:mlb.com/cubs+OR+site:mlb.com/news+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
-    {"name": "Google — ESPN (Cubs)",
-     "url": "https://news.google.com/rss/search?q=site:espn.com+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
-    {"name": "Google — Yahoo Sports (Cubs)",
-     "url": "https://news.google.com/rss/search?q=site:sports.yahoo.com+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
-    {"name": "Google — CBS Sports (Cubs)",
-     "url": "https://news.google.com/rss/search?q=site:cbssports.com+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
-    {"name": "Google — The Athletic (Cubs)",
-     "url": "https://news.google.com/rss/search?q=site:theathletic.com+Chicago+Cubs&hl=en-US&gl=US&ceid=US:en"},
-
-    # ===== Team blogs / insiders
-    {"name": "Cubs Insider (RSS)", "url": "https://www.cubsinsider.com/feed/"},
-    {"name": "Bleacher Nation — Cubs", "url": "https://www.bleachernation.com/cubs-rumors/feed/"},
-    {"name": "Bleed Cubbie Blue", "url": "https://www.bleedcubbieblue.com/rss/index.xml"},
-
-    # ===== Reddit
-    {"name": "Reddit — r/CHICubs", "url": "https://www.reddit.com/r/CHICubs/.rss"},
+    # MLB.com Cubs
+    "https://www.mlb.com/cubs/feeds/news/rss.xml",
+    # ESPN team page
+    "https://www.espn.com/espn/rss/mlb/team?team=chc",
+    # NBC Sports Chicago (Cubs)
+    "https://www.nbcsportschicago.com/rss/teams/chicago-cubs",
+    # Bleacher Nation (Cubs)
+    "https://www.bleachernation.com/cubs/feed/",
+    # SB Nation (Bleed Cubbie Blue)
+    "https://www.bleedcubbieblue.com/rss/index.xml",
+    # Chicago Tribune Cubs
+    "https://www.chicagotribune.com/arcio/rss/category/sports/cubs/?query=display_date:[* TO NOW]",
+    # Sun-Times Cubs
+    "https://chicago.suntimes.com/cubs/rss",
+    # Reddit r/CHICubs (can be noisy, but useful)
+    "https://www.reddit.com/r/CHICubs/.rss",
+    # YouTube – Chicago Cubs channel uploads (if present; YouTube RSS works via /feeds)
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCyerV8C6ip3zjYB4Z1cdqgw",
 ]
 
-# Quick links (top buttons). Order & labels to match the UI.
+# Optional: buttons on top of the page (names/URLs)
 STATIC_LINKS = [
-    {"label": "Cubs — Official",      "url": "https://www.mlb.com/cubs"},
-    {"label": "Schedule",             "url": "https://www.mlb.com/cubs/schedule"},
-    {"label": "Roster",               "url": "https://www.mlb.com/cubs/roster"},
-    {"label": "Standings",            "url": "https://www.mlb.com/standings"},
-    {"label": "ESPN",                 "url": "https://www.espn.com/mlb/team/_/name/chc/chicago-cubs"},
-    {"label": "CBS Sports",           "url": "https://www.cbssports.com/mlb/teams/CHC/chicago-cubs/"},
-    {"label": "Yahoo Sports",         "url": "https://sports.yahoo.com/mlb/teams/chicago/"},
-    {"label": "Bleed Cubbie Blue",    "url": "https://www.bleedcubbieblue.com/"},
-    {"label": "Cubs Insider",         "url": "https://www.cubsinsider.com/"},
-    {"label": "Bleacher Nation — Cubs","url": "https://www.bleachernation.com/chicago-cubs/"},
-    {"label": "Reddit — r/CHICubs",   "url": "https://www.reddit.com/r/CHICubs/"},
+    {"name": "Schedule", "url": "https://www.mlb.com/cubs/schedule"},
+    {"name": "Roster", "url": "https://www.mlb.com/cubs/roster"},
+    {"name": "Standings", "url": "https://www.mlb.com/standings"},
+    {"name": "Tickets", "url": "https://www.mlb.com/cubs/tickets"},
+    {"name": "Box Scores", "url": "https://www.espn.com/mlb/team/schedule/_/name/chc"},
 ]
