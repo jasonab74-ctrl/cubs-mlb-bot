@@ -1,8 +1,6 @@
 :root{
-  /* Light Purdue-style base with Cubs accents */
   --bg:#f6f3ea; --card:#fff; --text:#2b2b2b; --muted:#6d6d6d; --line:#e6e0d3;
-  --primary:#0e3386; /* Cubs blue */
-  --accent:#cc3433;  /* Cubs red  */
+  --primary:#0e3386; --accent:#cc3433;
   --pill-bg:#f1efe7; --pill-border:#dcd6c8;
   --shadow:rgba(0,0,0,.08);
 }
@@ -10,7 +8,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 
-/* --- Header banner: add color/gradient --- */
+/* --- Header banner --- */
 .site-header{
   display:flex;align-items:center;justify-content:flex-start;
   padding:14px 16px;
@@ -27,11 +25,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .title{margin:0;font-size:20px;font-weight:900;letter-spacing:.2px}
 .updated{font-size:12px;color:var(--muted);margin-top:2px}
 
-/* “Cubs Win” pill near title */
+/* “Cubs Win” pill */
 .pill-cta{background:var(--primary);color:#fff;border-color:var(--primary)}
 .pill-cta:hover{filter:brightness(1.05)}
 
-/* --- Links row (fan-friendly pills) --- */
+/* --- Quick links --- */
 .links{padding:12px 16px;border-bottom:1px solid var(--line);background:transparent}
 .pill-row{display:flex;flex-wrap:wrap;gap:10px}
 .pill{
@@ -42,7 +40,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 }
 .pill:hover{border-color:var(--primary);color:var(--primary)}
 
-/* --- Pretty collapsible News Sources --- */
+/* --- News Sources dropdown --- */
 .sources-dd{padding:10px 16px;border-bottom:1px solid var(--line)}
 .sources-dd > summary{list-style:none;cursor:pointer;font-weight:800;color:#3a342b;display:flex;align-items:center;gap:8px;outline:none}
 .sources-dd > summary::-webkit-details-marker{display:none}
@@ -52,25 +50,47 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .source-list a{color:#1f1f1f;text-decoration:none;border-bottom:1px dotted #b6b0a4}
 .source-list a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 
-/* --- Cards grid (unchanged) --- */
-.cards{max-width:1200px;margin:14px auto 64px;padding:0 16px;display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-.card{grid-column:span 12;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 4px 14px var(--shadow)}
-@media(min-width:740px){.card{grid-column:span 6}}
-@media(min-width:1080px){.card{grid-column:span 4}}
+/* --- Article cards grid --- */
+.cards{
+  max-width:1200px;
+  margin:14px auto 64px;
+  padding:0 16px;
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:14px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  box-shadow:0 4px 14px var(--shadow);
+  grid-column:span 12;
+}
 
-.card-title{display:inline-block;font-weight:900;font-size:18px;color:#1f1f1f;text-decoration:none}
+/* smaller bubbles like screenshot #2 */
+@media(min-width:740px){
+  .card{grid-column:span 4}  /* 3 per row on medium screens */
+}
+@media(min-width:1080px){
+  .card{grid-column:span 3}  /* 4 per row on large screens */
+}
+
+.card-title{
+  display:inline-block;font-weight:900;font-size:18px;color:#1f1f1f;text-decoration:none
+}
 .card-title:hover{color:var(--accent);text-decoration:underline}
 .meta{display:inline-flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin-top:6px}
 .summary{color:#3a3a3a;font-size:14px;line-height:1.5;margin-top:10px}
 
-/* Footer tools */
+/* --- Toolbar & banner --- */
 .toolbar{position:sticky;bottom:0;padding:12px 16px}
 .banner{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:999px;font-weight:800}
 .banner.hidden{display:none}
 
 .empty{opacity:.8;text-align:center;margin:40px 0}
 
-/* Small devices */
+/* --- Small devices --- */
 @media (max-width:600px){
   .team-logo{width:36px;height:36px}
   .title{font-size:18px}
