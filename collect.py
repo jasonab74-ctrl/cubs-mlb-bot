@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Chicago Cubs — Feed Collector
-- Pulls FEEDS, filters for Cubs content, writes items.json
-- Caps at 50 newest items
+Chicago Cubs — Feed Collector (robust)
+- Fetches FEEDS (requests with timeout, then feedparser)
+- Light-but-accurate Cubs filter (trusted hosts bypass)
+- Writes items.json (newest first, cap 50)
 """
 
 import json
@@ -12,24 +13,25 @@ import time
 import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
+import requests
 import feedparser
 
 from feeds import FEEDS
 
 USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0 Safari/537.36 (+sports-app-collector)"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 "
+    "+cubs-news-bot"
 )
 
 OUTPUT = "items.json"
 MAX_ITEMS = 50
+HTTP_TIMEOUT = 12  # seconds
 
-# ----- Filtering --------------------------------------------------------------
+# --- Filtering ----------------------------------------------------------------
 
-# Strong allow cues
 ALLOW_PATTERNS = [
     r"\bChicago Cubs\b",
     r"\bCubs\b",
@@ -38,22 +40,21 @@ ALLOW_PATTERNS = [
     r"\bClark and Addison\b",
 ]
 
-# Names to catch box scores/features that skip team names
 CUBS_NAMES = [
-    "Craig Counsell", "Jed Hoyer", "David Ross",
+    # coaches/front office
+    "Craig Counsell", "Jed Hoyer", "Carter Hawkins", "David Ross",
+    # notable players (current/common)
     "Nico Hoerner", "Dansby Swanson", "Seiya Suzuki", "Ian Happ",
     "Christopher Morel", "Shota Imanaga", "Justin Steele", "Kyle Hendricks",
     "Cody Bellinger", "Pete Crow-Armstrong", "Miguel Amaya", "Jameson Taillon",
+    "Ben Brown", "Jordan Wicks", "Keegan Thompson", "Adbert Alzolay",
 ]
 
-# Light exclusions (don’t block obvious neighboring teams’ news unless necessary)
 EXCLUDE_PATTERNS = [
-    r"\bWhite Sox\b",
-    r"\bBears\b", r"\bBlackhawks\b", r"\bBulls\b",
+    r"\bWhite Sox\b", r"\bBears\b", r"\bBlackhawks\b", r"\bBulls\b",
     r"\bNotre Dame\b", r"\bNorthwestern\b",
 ]
 
-# Hosts that are already Cubs-specific; we trust them and allow broadly
 TRUSTED_HOST_HINTS = [
     "mlb.com/cubs",
     "espn.com/mlb/team/_/name/chc",
@@ -61,15 +62,20 @@ TRUSTED_HOST_HINTS = [
     "bleachernation.com",
     "bleedcubbieblue.com",
     "yardbarker.com",
-    "yahoo.com/mlb/teams/chc",
+    "sports.yahoo.com/mlb/teams/chc",
     "cbssports.com/feeds/team/mlb/chc",
+    "chicagotribune.com",
+    "chicago.suntimes.com",
+    "news.google.com",
+    "reddit.com/r/CHICubs",
+    "youtube.com/feeds/videos.xml",
 ]
 
 def is_trusted(url: str) -> bool:
-    url_lower = url.lower()
-    return any(h in url_lower for h in TRUSTED_HOST_HINTS)
+    u = url.lower()
+    return any(h in u for h in TRUSTED_HOST_HINTS)
 
-def strip_html(text: str) -> str:
+def strip_html(text: Optional[str]) -> str:
     return re.sub(r"<[^>]+>", "", text or "")
 
 def allow_item(entry: Dict[str, Any], source_url: str) -> bool:
@@ -89,13 +95,14 @@ def allow_item(entry: Dict[str, Any], source_url: str) -> bool:
     if any(name.lower() in hay.lower() for name in CUBS_NAMES):
         return True
 
-    # Google News sometimes puts team in 'source' only; be permissive if title mentions MLB and Chicago
+    # Google News type headlines
     if re.search(r"\bChicago\b", hay, flags=re.I) and re.search(r"\bMLB\b|\bbaseball\b", hay, flags=re.I):
         return True
 
     return False
 
 def normalize_time(entry: Dict[str, Any]) -> float:
+    # RFC822 strings
     for k in ("published", "updated", "pubDate"):
         if entry.get(k):
             try:
@@ -105,10 +112,11 @@ def normalize_time(entry: Dict[str, Any]) -> float:
                 return dt.timestamp()
             except Exception:
                 pass
+    # struct_time
     for k in ("published_parsed", "updated_parsed"):
         if entry.get(k):
             try:
-                return time.mktime(entry[k])
+                return time.mktime(entry[k])  # type: ignore[arg-type]
             except Exception:
                 pass
     return time.time()
@@ -131,7 +139,16 @@ def to_item(entry: Dict[str, Any], feed_title: str) -> Dict[str, Any]:
     }
 
 def fetch_feed(url: str):
-    return feedparser.parse(url, request_headers={"User-Agent": USER_AGENT})
+    """
+    Try requests first (handles some TLS/redirect quirks), then feedparser on bytes.
+    Fall back to feedparser.parse(url) if requests fails.
+    """
+    try:
+        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=HTTP_TIMEOUT, allow_redirects=True)
+        resp.raise_for_status()
+        return feedparser.parse(resp.content)
+    except Exception:
+        return feedparser.parse(url, request_headers={"User-Agent": USER_AGENT})
 
 def collect() -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
@@ -140,11 +157,15 @@ def collect() -> List[Dict[str, Any]]:
             parsed = fetch_feed(url)
             feed_title = (parsed.feed.get("title") or "Source").strip()
             for entry in parsed.entries:
-                if allow_item(entry, url):
-                    items.append(to_item(entry, feed_title))
+                try:
+                    if allow_item(entry, url):
+                        items.append(to_item(entry, feed_title))
+                except Exception:
+                    continue
         except Exception:
             continue
 
+    # newest first + cap
     items.sort(key=lambda x: x["published_ts"], reverse=True)
     return items[:MAX_ITEMS]
 
