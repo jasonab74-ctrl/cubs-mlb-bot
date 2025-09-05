@@ -50,40 +50,58 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .source-list a{color:#1f1f1f;text-decoration:none;border-bottom:1px dotted #b6b0a4}
 .source-list a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 
-/* --- Article cards grid --- */
+/* --- Article cards grid (smaller bubbles) --- */
 .cards{
-  max-width:1200px;
+  max-width:1360px;                /* a bit wider canvas */
   margin:14px auto 64px;
   padding:0 16px;
   display:grid;
   grid-template-columns:repeat(12,1fr);
-  gap:14px;
+  gap:12px;                         /* tighter gaps */
 }
+
 .card{
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
-  box-shadow:0 4px 14px var(--shadow);
-  grid-column:span 12;
+  border-radius:12px;               /* slightly smaller radius */
+  padding:12px;                     /* tighter padding */
+  box-shadow:0 3px 10px var(--shadow);
+  grid-column:span 12;              /* mobile: 1 per row */
 }
 
-/* smaller bubbles like screenshot #2 */
+/* medium screens: 4 per row (smaller) */
 @media(min-width:740px){
-  .card{grid-column:span 4}  /* 3 per row on medium screens */
-}
-@media(min-width:1080px){
-  .card{grid-column:span 3}  /* 4 per row on large screens */
+  .card{grid-column:span 3;}        /* 12/3 = 4 cards per row */
 }
 
+/* large screens: 6 per row (compact desktop) */
+@media(min-width:1080px){
+  .card{grid-column:span 2;}        /* 12/2 = 6 cards per row */
+}
+
+/* typography inside cards tuned down a hair */
 .card-title{
-  display:inline-block;font-weight:900;font-size:18px;color:#1f1f1f;text-decoration:none
+  display:inline-block;
+  font-weight:900;
+  font-size:17px;                   /* was 18px */
+  color:#1f1f1f;
+  text-decoration:none;
+  line-height:1.25;
 }
 .card-title:hover{color:var(--accent);text-decoration:underline}
-.meta{display:inline-flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin-top:6px}
-.summary{color:#3a3a3a;font-size:14px;line-height:1.5;margin-top:10px}
 
-/* --- Toolbar & banner --- */
+.meta{
+  display:inline-flex;gap:8px;align-items:center;
+  color:var(--muted);font-size:12px;margin-top:6px
+}
+
+/* clamp summary so tall posts don't make tall bubbles */
+.summary{
+  color:#3a3a3a;font-size:13.5px;line-height:1.4;margin-top:8px;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4; /* ~4 lines */
+  overflow:hidden;
+}
+
 .toolbar{position:sticky;bottom:0;padding:12px 16px}
 .banner{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:999px;font-weight:800}
 .banner.hidden{display:none}
