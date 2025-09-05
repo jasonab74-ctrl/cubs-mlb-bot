@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Chicago Cubs — News App Server
+Chicago Cubs — News App Server (safe startup)
 - Cubs-themed Purdue UI
 - Fan-friendly quick links (feeds.STATIC_LINKS)
 - Clean collapsible "News Sources" (from feeds.FEEDS)
 - /collect-open   : run collector in a background thread
-- /debug-collect  : run collector synchronously and return result (admin tool)
+- /debug-collect  : run collector synchronously and return result
 - /health         : collector status + last error
-- NEW: One-time automatic background collection on app startup (no cron)
+- SAFE AUTO-COLLECT: on the first normal page request only, if items.json is empty
+  (no cron; non-blocking; guarded so it runs once per process)
 """
 
 import json
@@ -25,7 +26,6 @@ from feeds import FEEDS, STATIC_LINKS
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 ITEMS_FILE = "items.json"
-STARTUP_MARK_FILE = ".startup-collect.done"  # prevents multi-run across Gunicorn workers
 
 # Media autodetect (keeps your filenames intact)
 CANDIDATE_LOGOS = ["cubs-logo.png", "logo.png", "cubs.png", "purdue-logo.png"]
@@ -96,6 +96,10 @@ _collect_state: Dict[str, Any] = {
     "last_error": None,
 }
 
+# Guard to ensure we only try the auto-collect once per process
+_startup_check_done = False
+_startup_check_lock = threading.Lock()
+
 def _run_collect_background():
     """Run the collector safely in a background thread and update items.json."""
     from collect import collect as _collector_collect  # local import avoids circular deps
@@ -135,47 +139,33 @@ def _items_empty() -> bool:
     except Exception:
         return True
 
-def _create_startup_mark_once() -> bool:
+def _maybe_auto_collect_once():
     """
-    Attempt to create a marker file atomically. Returns True only for the
-    first process that creates it; others will get False (file exists).
+    Safe, lightweight auto-collect:
+    - Runs at the first normal page request only (per worker)
+    - Does nothing if DISABLE_STARTUP_COLLECT=1
+    - Does nothing if items.json already has content
+    - Non-blocking (background thread)
     """
-    try:
-        # 'x' creates the file only if it doesn't exist, raising FileExistsError otherwise.
-        with open(STARTUP_MARK_FILE, "x", encoding="utf-8") as f:
-            f.write(f"started:{time.time()}\n")
-        return True
-    except FileExistsError:
-        return False
-    except Exception:
-        # If filesystem is read-only or something odd, just don't block startup
-        return False
-
-# ------------- One-time automatic collect on startup -------------
-
-@app.before_first_request
-def _kickoff_startup_collect():
-    """
-    On first request after deploy, run one background collection if:
-    - STARTUP_COLLECT isn't disabled
-    - This worker wins the marker file race
-    - items.json is missing or empty
-    """
+    global _startup_check_done
     if os.environ.get("DISABLE_STARTUP_COLLECT") == "1":
         return
-
-    # Ensure only one Gunicorn worker kicks off the startup collection
-    if _create_startup_mark_once():
+    if _startup_check_done:
+        return
+    with _startup_check_lock:
+        if _startup_check_done:
+            return
+        _startup_check_done = True
         if _items_empty():
             _start_background_collect_if_idle()
-        else:
-            # items already present; nothing to do
-            pass
 
 # --------------------------- Routes ---------------------------
 
 @app.route("/")
 def index():
+    # Kick off a one-time background collect if empty (safe, non-blocking)
+    _maybe_auto_collect_once()
+
     data = _read_items()
     return render_template(
         "index.html",
