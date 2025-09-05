@@ -4,11 +4,12 @@
 """
 Chicago Cubs — News App Server
 - Cubs-themed Purdue UI
-- Quick-link pills (feeds.STATIC_LINKS)
+- Fan-friendly quick links (feeds.STATIC_LINKS)
 - Clean collapsible "News Sources" (from feeds.FEEDS)
-- /collect-open  : run collector in a background thread
-- /debug-collect : run collector synchronously and return result (admin tool)
-- /health        : collector status + last error
+- /collect-open   : run collector in a background thread
+- /debug-collect  : run collector synchronously and return result (admin tool)
+- /health         : collector status + last error
+- NEW: One-time automatic background collection on app startup (no cron)
 """
 
 import json
@@ -22,11 +23,15 @@ from flask import Flask, jsonify, render_template
 from feeds import FEEDS, STATIC_LINKS
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-ITEMS_FILE = "items.json"
 
+ITEMS_FILE = "items.json"
+STARTUP_MARK_FILE = ".startup-collect.done"  # prevents multi-run across Gunicorn workers
+
+# Media autodetect (keeps your filenames intact)
 CANDIDATE_LOGOS = ["cubs-logo.png", "logo.png", "cubs.png", "purdue-logo.png"]
 CANDIDATE_AUDIO = ["cubs-win.mp3", "fight-song.mp3", "theme.mp3"]
 
+# Friendly names for source list
 FRIENDLY_SOURCE_NAMES = {
     "mlb.com": "MLB.com",
     "espn.com": "ESPN",
@@ -42,6 +47,8 @@ FRIENDLY_SOURCE_NAMES = {
     "youtube.com": "YouTube",
     "news.google.com": "Google News",
 }
+
+# ------------------------ Helpers ------------------------
 
 def _first_existing(options: List[str]) -> str:
     for rel in options:
@@ -78,15 +85,20 @@ def _build_sources() -> List[Dict[str, str]]:
             continue
     return sorted(out, key=lambda d: d["name"].lower())
 
-# ---------- Collector control ----------
+# ---------------- Collector control & state ----------------
+
 _collect_lock = threading.Lock()
 _collect_state: Dict[str, Any] = {
-    "running": False, "last_start": None, "last_end": None,
-    "last_count": 0, "last_error": None,
+    "running": False,
+    "last_start": None,
+    "last_end": None,
+    "last_count": 0,
+    "last_error": None,
 }
 
 def _run_collect_background():
-    from collect import collect as _collector_collect
+    """Run the collector safely in a background thread and update items.json."""
+    from collect import collect as _collector_collect  # local import avoids circular deps
     try:
         items = _collector_collect()
         _write_items(items)
@@ -102,7 +114,66 @@ def _run_collect_background():
         except Exception:
             pass
 
-# ---------- Routes ----------
+def _start_background_collect_if_idle() -> bool:
+    """Start background collect if not already running. Returns True if started."""
+    if _collect_state["running"]:
+        return False
+    acquired = _collect_lock.acquire(blocking=False)
+    if not acquired:
+        _collect_state["running"] = True
+        return False
+    _collect_state["running"] = True
+    _collect_state["last_start"] = time.time()
+    _collect_state["last_end"] = None
+    threading.Thread(target=_run_collect_background, daemon=True).start()
+    return True
+
+def _items_empty() -> bool:
+    try:
+        data = _read_items()
+        return not data.get("items")
+    except Exception:
+        return True
+
+def _create_startup_mark_once() -> bool:
+    """
+    Attempt to create a marker file atomically. Returns True only for the
+    first process that creates it; others will get False (file exists).
+    """
+    try:
+        # 'x' creates the file only if it doesn't exist, raising FileExistsError otherwise.
+        with open(STARTUP_MARK_FILE, "x", encoding="utf-8") as f:
+            f.write(f"started:{time.time()}\n")
+        return True
+    except FileExistsError:
+        return False
+    except Exception:
+        # If filesystem is read-only or something odd, just don't block startup
+        return False
+
+# ------------- One-time automatic collect on startup -------------
+
+@app.before_first_request
+def _kickoff_startup_collect():
+    """
+    On first request after deploy, run one background collection if:
+    - STARTUP_COLLECT isn't disabled
+    - This worker wins the marker file race
+    - items.json is missing or empty
+    """
+    if os.environ.get("DISABLE_STARTUP_COLLECT") == "1":
+        return
+
+    # Ensure only one Gunicorn worker kicks off the startup collection
+    if _create_startup_mark_once():
+        if _items_empty():
+            _start_background_collect_if_idle()
+        else:
+            # items already present; nothing to do
+            pass
+
+# --------------------------- Routes ---------------------------
+
 @app.route("/")
 def index():
     data = _read_items()
@@ -124,19 +195,14 @@ def items_json():
 @app.route("/collect-open")
 def collect_open():
     """Kick off a background collect (non-blocking)."""
-    if _collect_state["running"]:
-        return jsonify({"ok": True, "status": "already-running",
-                        "last_count": _collect_state["last_count"],
-                        "last_error": _collect_state["last_error"]})
-    acquired = _collect_lock.acquire(blocking=False)
-    if not acquired:
-        _collect_state["running"] = True
-        return jsonify({"ok": True, "status": "already-running"})
-    _collect_state["running"] = True
-    _collect_state["last_start"] = time.time()
-    _collect_state["last_end"] = None
-    threading.Thread(target=_run_collect_background, daemon=True).start()
-    return jsonify({"ok": True, "status": "started"})
+    started = _start_background_collect_if_idle()
+    status = "started" if started else "already-running"
+    return jsonify({
+        "ok": True,
+        "status": status,
+        "last_count": _collect_state["last_count"],
+        "last_error": _collect_state["last_error"],
+    })
 
 @app.route("/debug-collect")
 def debug_collect():
@@ -169,9 +235,13 @@ def debug_collect():
 @app.route("/health")
 def health():
     return jsonify({
-        "ok": True, "time": time.time(),
+        "ok": True,
+        "time": time.time(),
         "collector": _collect_state
     })
 
+# --------------------------- Main ---------------------------
+
 if __name__ == "__main__":
+    # For local debug: python3 server.py
     app.run(host="0.0.0.0", port=5000, debug=False)
