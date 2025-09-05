@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Chicago Cubs — News & Feeds</title>
+  <title>Chicago Cubs — News and Feeds</title>
   <link rel="icon" href="/static/favicon.ico" />
   <link rel="stylesheet" href="/static/style.css"/>
 </head>
@@ -13,20 +13,17 @@
       {% if logo_path %}
         <img class="team-logo" src="{{ url_for('static', filename=logo_path) }}" alt="logo"/>
       {% endif %}
-      <div>
-        <h1 class="title">{{ team }}</h1>
-        <div class="updated">Updated:
-          <span id="updatedLabel" data-ts="{{ '%.0f' % updated_ts }}"></span>
+      <div class="title-wrap">
+        <div class="title-row">
+          <h1 class="title">{{ team }} — News and Feeds</h1>
+          {% if audio_path %}
+            <button id="songBtn" class="pill pill-cta" title="Play clip">Cubs Win</button>
+          {% endif %}
+        </div>
+        <div class="updated">
+          Updated: <span id="updatedLabel" data-ts="{{ '%.0f' % updated_ts }}"></span>
         </div>
       </div>
-    </div>
-    <div class="header-right">
-      {% if audio_path %}
-      <button id="songBtn" class="pill" title="Play clip">Cubs Win</button>
-      <audio id="song" preload="auto">
-        <source src="{{ url_for('static', filename=audio_path) }}" type="audio/mpeg"/>
-      </audio>
-      {% endif %}
     </div>
   </header>
 
@@ -41,7 +38,7 @@
   </nav>
 
   {% if sources and sources|length > 0 %}
-  <details class="sources-dd" open="false">
+  <details class="sources-dd">
     <summary><span class="caret"></span> News Sources</summary>
     <ul class="source-list">
       {% for s in sources %}
@@ -76,6 +73,12 @@
   <div class="toolbar">
     <div id="newItemsBanner" class="banner hidden">New items available — <a href="#" id="reloadLink">refresh</a></div>
   </div>
+
+  {% if audio_path %}
+  <audio id="song" preload="auto">
+    <source src="{{ url_for('static', filename=audio_path) }}" type="audio/mpeg"/>
+  </audio>
+  {% endif %}
 
   <script>
     function fmtTime(ts) {
@@ -113,9 +116,10 @@
 
     const song = document.getElementById('song');
     document.getElementById('songBtn')?.addEventListener('click', () => { if (!song) return; if (song.paused) song.play(); else song.pause(); });
+
     document.getElementById('reloadLink')?.addEventListener('click', (e) => { e.preventDefault(); window.location.reload(); });
 
-    // rotate caret on details toggle
+    // caret rotation for sources dropdown
     const dd = document.querySelector('.sources-dd');
     const caret = document.querySelector('.sources-dd .caret');
     function syncCaret(){ if(!dd||!caret) return; caret.classList.toggle('open', dd.open); }
