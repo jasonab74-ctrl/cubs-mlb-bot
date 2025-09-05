@@ -8,7 +8,9 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 
-/* --- Header banner --- */
+/* -------------------------------------------------------------------
+   HEADER
+   ------------------------------------------------------------------- */
 .site-header{
   display:flex;align-items:center;justify-content:flex-start;
   padding:14px 16px;
@@ -29,7 +31,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .pill-cta{background:var(--primary);color:#fff;border-color:var(--primary)}
 .pill-cta:hover{filter:brightness(1.05)}
 
-/* --- Quick links --- */
+/* -------------------------------------------------------------------
+   QUICK LINKS
+   ------------------------------------------------------------------- */
 .links{padding:12px 16px;border-bottom:1px solid var(--line);background:transparent}
 .pill-row{display:flex;flex-wrap:wrap;gap:10px}
 .pill{
@@ -40,7 +44,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 }
 .pill:hover{border-color:var(--primary);color:var(--primary)}
 
-/* --- News Sources dropdown --- */
+/* -------------------------------------------------------------------
+   NEWS SOURCES DROPDOWN
+   ------------------------------------------------------------------- */
 .sources-dd{padding:10px 16px;border-bottom:1px solid var(--line)}
 .sources-dd > summary{list-style:none;cursor:pointer;font-weight:800;color:#3a342b;display:flex;align-items:center;gap:8px;outline:none}
 .sources-dd > summary::-webkit-details-marker{display:none}
@@ -50,40 +56,42 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .source-list a{color:#1f1f1f;text-decoration:none;border-bottom:1px dotted #b6b0a4}
 .source-list a:hover{color:var(--accent);border-bottom-color:var(--accent)}
 
-/* --- Article cards grid (smaller bubbles) --- */
+/* -------------------------------------------------------------------
+   ARTICLE CARDS GRID
+   -------------------------------------------------------------------
+   Phones  : 1 per row
+   Tablets : 3 per row
+   Desktop : 3 per row
+   ------------------------------------------------------------------- */
 .cards{
-  max-width:1360px;                /* a bit wider canvas */
+  max-width:1200px;
   margin:14px auto 64px;
   padding:0 16px;
   display:grid;
   grid-template-columns:repeat(12,1fr);
-  gap:12px;                         /* tighter gaps */
+  gap:12px;
 }
-
 .card{
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:12px;               /* slightly smaller radius */
-  padding:12px;                     /* tighter padding */
+  border-radius:12px;
+  padding:12px;
   box-shadow:0 3px 10px var(--shadow);
-  grid-column:span 12;              /* mobile: 1 per row */
+  grid-column:span 12;              /* 1 per row on mobile */
 }
 
-/* medium screens: 4 per row (smaller) */
+/* tablet and up: 3 per row (12/4) */
 @media(min-width:740px){
-  .card{grid-column:span 3;}        /* 12/3 = 4 cards per row */
+  .card{grid-column:span 4;}
 }
-
-/* large screens: 6 per row (compact desktop) */
 @media(min-width:1080px){
-  .card{grid-column:span 2;}        /* 12/2 = 6 cards per row */
+  .card{grid-column:span 4;}
 }
 
-/* typography inside cards tuned down a hair */
 .card-title{
   display:inline-block;
   font-weight:900;
-  font-size:17px;                   /* was 18px */
+  font-size:17px;
   color:#1f1f1f;
   text-decoration:none;
   line-height:1.25;
@@ -98,17 +106,22 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 /* clamp summary so tall posts don't make tall bubbles */
 .summary{
   color:#3a3a3a;font-size:13.5px;line-height:1.4;margin-top:8px;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4; /* ~4 lines */
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;
   overflow:hidden;
 }
 
+/* -------------------------------------------------------------------
+   TOOLBAR / FOOTER
+   ------------------------------------------------------------------- */
 .toolbar{position:sticky;bottom:0;padding:12px 16px}
 .banner{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:999px;font-weight:800}
 .banner.hidden{display:none}
 
 .empty{opacity:.8;text-align:center;margin:40px 0}
 
-/* --- Small devices --- */
+/* -------------------------------------------------------------------
+   SMALL DEVICES
+   ------------------------------------------------------------------- */
 @media (max-width:600px){
   .team-logo{width:36px;height:36px}
   .title{font-size:18px}
