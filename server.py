@@ -3,10 +3,12 @@
 
 """
 Chicago Cubs — News App Server
-- Purdue-style UI with Cubs branding
-- Fan-friendly quick links (from feeds.STATIC_LINKS)
+- Cubs-themed Purdue UI
+- Quick-link pills (feeds.STATIC_LINKS)
 - Clean collapsible "News Sources" (from feeds.FEEDS)
-- NEW: /collect-open endpoint to refresh items.json on-demand (no cron needed)
+- /collect-open  : run collector in a background thread
+- /debug-collect : run collector synchronously and return result (admin tool)
+- /health        : collector status + last error
 """
 
 import json
@@ -19,16 +21,12 @@ from flask import Flask, jsonify, render_template
 
 from feeds import FEEDS, STATIC_LINKS
 
-# ------- App & paths ----------------------------------------------------------
-
 app = Flask(__name__, template_folder="templates", static_folder="static")
 ITEMS_FILE = "items.json"
 
-# Media auto-detection (keeps your filenames intact if present)
 CANDIDATE_LOGOS = ["cubs-logo.png", "logo.png", "cubs.png", "purdue-logo.png"]
 CANDIDATE_AUDIO = ["cubs-win.mp3", "fight-song.mp3", "theme.mp3"]
 
-# Human names for sources (fallback to host)
 FRIENDLY_SOURCE_NAMES = {
     "mlb.com": "MLB.com",
     "espn.com": "ESPN",
@@ -44,8 +42,6 @@ FRIENDLY_SOURCE_NAMES = {
     "youtube.com": "YouTube",
     "news.google.com": "Google News",
 }
-
-# ------- Helpers --------------------------------------------------------------
 
 def _first_existing(options: List[str]) -> str:
     for rel in options:
@@ -82,22 +78,17 @@ def _build_sources() -> List[Dict[str, str]]:
             continue
     return sorted(out, key=lambda d: d["name"].lower())
 
-# ------- On-demand collector (no cron) ---------------------------------------
-
+# ---------- Collector control ----------
 _collect_lock = threading.Lock()
 _collect_state: Dict[str, Any] = {
-    "running": False,
-    "last_start": None,
-    "last_end": None,
-    "last_count": 0,
-    "last_error": None,
+    "running": False, "last_start": None, "last_end": None,
+    "last_count": 0, "last_error": None,
 }
 
 def _run_collect_background():
-    """Run the collector safely in a background thread and update items.json."""
-    from collect import collect as _collector_collect  # local import avoids circulars
+    from collect import collect as _collector_collect
     try:
-        items = _collector_collect()  # returns list of items (already sorted & capped)
+        items = _collector_collect()
         _write_items(items)
         _collect_state["last_count"] = len(items)
         _collect_state["last_error"] = None
@@ -111,8 +102,7 @@ def _run_collect_background():
         except Exception:
             pass
 
-# ------- Routes ---------------------------------------------------------------
-
+# ---------- Routes ----------
 @app.route("/")
 def index():
     data = _read_items()
@@ -133,51 +123,55 @@ def items_json():
 
 @app.route("/collect-open")
 def collect_open():
-    """
-    Start a background collection run if one isn't already running.
-    Returns immediate status JSON. Hit this URL whenever you want a manual refresh.
-    """
+    """Kick off a background collect (non-blocking)."""
     if _collect_state["running"]:
-        return jsonify({
-            "ok": True,
-            "status": "already-running",
-            "last_start": _collect_state["last_start"],
-            "last_end": _collect_state["last_end"],
-            "last_count": _collect_state["last_count"],
-            "last_error": _collect_state["last_error"],
-        })
-
+        return jsonify({"ok": True, "status": "already-running",
+                        "last_count": _collect_state["last_count"],
+                        "last_error": _collect_state["last_error"]})
     acquired = _collect_lock.acquire(blocking=False)
     if not acquired:
-        # Another request won the race; report running.
         _collect_state["running"] = True
         return jsonify({"ok": True, "status": "already-running"})
-
     _collect_state["running"] = True
     _collect_state["last_start"] = time.time()
     _collect_state["last_end"] = None
-
-    t = threading.Thread(target=_run_collect_background, daemon=True)
-    t.start()
-
+    threading.Thread(target=_run_collect_background, daemon=True).start()
     return jsonify({"ok": True, "status": "started"})
+
+@app.route("/debug-collect")
+def debug_collect():
+    """
+    Run collector synchronously and return a summary.
+    Use this if you want an immediate refresh and to see any error surfaced.
+    """
+    from collect import collect as _collector_collect
+    started = time.time()
+    try:
+        items = _collector_collect()
+        _write_items(items)
+        _collect_state.update({
+            "running": False,
+            "last_start": started,
+            "last_end": time.time(),
+            "last_count": len(items),
+            "last_error": None,
+        })
+        return jsonify({"ok": True, "count": len(items), "duration_s": round(time.time() - started, 2)})
+    except Exception as e:
+        _collect_state.update({
+            "running": False,
+            "last_start": started,
+            "last_end": time.time(),
+            "last_error": repr(e),
+        })
+        return jsonify({"ok": False, "error": repr(e)}), 500
 
 @app.route("/health")
 def health():
     return jsonify({
-        "ok": True,
-        "time": time.time(),
-        "collector": {
-            "running": _collect_state["running"],
-            "last_start": _collect_state["last_start"],
-            "last_end": _collect_state["last_end"],
-            "last_count": _collect_state["last_count"],
-            "last_error": _collect_state["last_error"],
-        }
+        "ok": True, "time": time.time(),
+        "collector": _collect_state
     })
 
-# ------- Main -----------------------------------------------------------------
-
 if __name__ == "__main__":
-    # For local debug: python3 server.py
     app.run(host="0.0.0.0", port=5000, debug=False)
